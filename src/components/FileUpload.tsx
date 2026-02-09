@@ -17,7 +17,7 @@ export function FileUpload() {
     } = useStore();
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [uploadedBlobs, setUploadedBlobs] = useState<any[]>([]);
-    const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'empty'>('idle');
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [syncMessage, setSyncMessage] = useState<string>('');
 
     const uploadFile = async (file: File) => {
@@ -44,65 +44,75 @@ export function FileUpload() {
         }
     }, [columnMapping, pendingFiles]);
 
-    // Fetch and load remote files
-    const loadRemoteFiles = useCallback(async () => {
-        setSyncStatus('loading');
-        setSyncMessage('Buscando archivos compartidos...');
-        try {
-            const res = await fetch('/api/list-gantt');
-            if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
-
-            const data = await res.json();
-            console.log("Remote files response:", data);
-
-            if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
-                setSyncMessage(`Encontrados ${data.urls.length} archivos. Descargando...`);
-                // Update list of uploaded blobs for display
-                setUploadedBlobs(data.urls.map((url: string) => ({ url, pathname: url })));
-
-                // Process each file
-                let successCount = 0;
-                for (const url of data.urls) {
-                    try {
-                        const fileRes = await fetch(url);
-                        const blob = await fileRes.blob();
-                        // Try to extract filename, fallback to generic
-                        let filename = 'remote-gantt.xlsx';
-                        try {
-                            const urlObj = new URL(url);
-                            const pathParts = urlObj.pathname.split('/');
-                            filename = pathParts[pathParts.length - 1] || filename;
-                            filename = decodeURIComponent(filename);
-                        } catch (e) { }
-
-                        const file = new File([blob], filename, { type: blob.type });
-                        const loaded = processFile(file);
-                        if (loaded) successCount++;
-                    } catch (err) {
-                        console.error(`Failed to load remote file ${url}:`, err);
-                    }
-                }
-                if (successCount > 0) {
-                    setSyncStatus('success');
-                    setSyncMessage(`Sincronizados ${successCount} archivos desde la nube.`);
-                    setTimeout(() => setSyncStatus('idle'), 5000);
-                } else {
-                    setSyncStatus('idle'); // Should we show error if 0 loaded?
-                }
-            } else {
-                setSyncStatus('empty');
-                setSyncMessage('No hay archivos en la nube.');
-            }
-        } catch (error: any) {
-            console.error("Error loading remote files:", error);
-            setSyncStatus('error');
-            setSyncMessage(`Error: ${error.message}`);
-        }
-    }, [columnMapping, addTasks]);
-
+    // Fetch and load remote files on mount
     useEffect(() => {
+        console.log('[FileUpload] useEffect ejecutándose - iniciando carga remota');
+        const loadRemoteFiles = async () => {
+            console.log('[FileUpload] loadRemoteFiles iniciado');
+            setSyncStatus('loading');
+            setSyncMessage('Buscando archivos compartidos...');
+            try {
+                console.log('[FileUpload] Llamando a /api/list-gantt');
+                const res = await fetch('/api/list-gantt');
+                console.log('[FileUpload] Respuesta recibida:', res.status, res.statusText);
+                if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+
+                const data = await res.json();
+                console.log('[FileUpload] Datos recibidos:', data);
+
+                if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
+                    console.log(`[FileUpload] Encontrados ${data.urls.length} archivos`);
+                    setSyncMessage(`Encontrados ${data.urls.length} archivos. Descargando...`);
+                    // Update list of uploaded blobs for display
+                    setUploadedBlobs(data.urls.map((url: string) => ({ url, pathname: url })));
+
+                    // Process each file
+                    let successCount = 0;
+                    for (const url of data.urls) {
+                        try {
+                            console.log(`[FileUpload] Descargando archivo: ${url}`);
+                            const fileRes = await fetch(url);
+                            const blob = await fileRes.blob();
+                            // Try to extract filename, fallback to generic
+                            let filename = 'remote-gantt.xlsx';
+                            try {
+                                const urlObj = new URL(url);
+                                const pathParts = urlObj.pathname.split('/');
+                                filename = pathParts[pathParts.length - 1] || filename;
+                                filename = decodeURIComponent(filename);
+                            } catch (e) { }
+
+                            const file = new File([blob], filename, { type: blob.type });
+                            console.log(`[FileUpload] Procesando archivo: ${filename}`);
+                            const loaded = processFile(file);
+                            if (loaded) successCount++;
+                        } catch (err) {
+                            console.error(`Failed to load remote file ${url}:`, err);
+                        }
+                    }
+                    console.log(`[FileUpload] Archivos procesados exitosamente: ${successCount}`);
+                    if (successCount > 0) {
+                        setSyncStatus('success');
+                        setSyncMessage(`Sincronizados ${successCount} archivos desde la nube.`);
+                        setTimeout(() => setSyncStatus('idle'), 5000);
+                    } else {
+                        setSyncStatus('error');
+                        setSyncMessage('No se pudieron procesar los archivos.');
+                    }
+                } else {
+                    console.log('[FileUpload] No hay archivos en la respuesta');
+                    setSyncStatus('idle');
+                    setSyncMessage('No hay archivos compartidos recientes.');
+                }
+            } catch (error: any) {
+                console.error("[FileUpload] Error loading remote files:", error);
+                setSyncStatus('error');
+                setSyncMessage(`Error de sincronización: ${error.message}`);
+            }
+        };
+
         loadRemoteFiles();
-    }, [loadRemoteFiles]);
+    }, []); // Run once on mount
 
     const processFile = (file: File) => {
         // If we don't have a mapping yet, queue it.
@@ -390,30 +400,18 @@ export function FileUpload() {
             )}
 
             {/* Sync Status Feedback */}
-            <div className="mt-4 flex flex-col items-center gap-2">
-                {syncStatus !== 'idle' && (
-                    <div className={cn(
-                        "px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2",
-                        syncStatus === 'loading' && "bg-blue-50 text-blue-600",
-                        syncStatus === 'success' && "bg-green-50 text-green-600",
-                        syncStatus === 'error' && "bg-red-50 text-red-600",
-                        syncStatus === 'empty' && "bg-gray-100 text-gray-500"
-                    )}>
-                        {syncStatus === 'loading' && <span className="animate-spin">⌛</span>}
-                        {syncStatus === 'error' && <span>⚠️</span>}
-                        {syncStatus === 'empty' && <span>ℹ️</span>}
-                        {syncMessage}
-                    </div>
-                )}
-
-                <button
-                    onClick={() => loadRemoteFiles()}
-                    className="text-xs text-primary underline hover:text-primary/80"
-                    disabled={syncStatus === 'loading'}
-                >
-                    Forzar sincronización ahora
-                </button>
-            </div>
+            {syncStatus !== 'idle' && (
+                <div className={cn(
+                    "mt-4 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2",
+                    syncStatus === 'loading' && "bg-blue-50 text-blue-600",
+                    syncStatus === 'success' && "bg-green-50 text-green-600",
+                    syncStatus === 'error' && "bg-red-50 text-red-600"
+                )}>
+                    {syncStatus === 'loading' && <span className="animate-spin">⌛</span>}
+                    {syncStatus === 'error' && <span>⚠️</span>}
+                    {syncMessage}
+                </div>
+            )}
 
             {uploadedBlobs.length > 0 && (
                 <div
