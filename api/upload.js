@@ -9,8 +9,13 @@ const redis = new Redis({
 
 export default async function handler(request, response) {
   try {
-    const { searchParams } = new URL(request.url);
-    const filename = searchParams.get('filename');
+    // Vercel puede pasar request.url como path relativo o URL completa
+    // Construimos una URL completa si es necesario
+    const url = request.url.startsWith('http')
+      ? new URL(request.url)
+      : new URL(request.url, `https://${request.headers.host || 'localhost'}`);
+
+    const filename = url.searchParams.get('filename');
 
     if (!filename) {
       return response.status(400).json({ error: 'Filename is required' });
