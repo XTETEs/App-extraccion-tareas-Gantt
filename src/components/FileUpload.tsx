@@ -17,6 +17,8 @@ export function FileUpload() {
     } = useStore();
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [uploadedBlobs, setUploadedBlobs] = useState<any[]>([]);
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [syncMessage, setSyncMessage] = useState<string>('');
 
     const uploadFile = async (file: File) => {
         try {
@@ -45,15 +47,21 @@ export function FileUpload() {
     // Fetch and load remote files on mount
     useEffect(() => {
         const loadRemoteFiles = async () => {
+            setSyncStatus('loading');
+            setSyncMessage('Buscando archivos compartidos...');
             try {
                 const res = await fetch('/api/list-gantt');
+                if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+
                 const data = await res.json();
 
-                if (data.urls && Array.isArray(data.urls)) {
+                if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
+                    setSyncMessage(`Encontrados ${data.urls.length} archivos. Descargando...`);
                     // Update list of uploaded blobs for display
                     setUploadedBlobs(data.urls.map((url: string) => ({ url, pathname: url })));
 
                     // Process each file
+                    let successCount = 0;
                     for (const url of data.urls) {
                         try {
                             const fileRes = await fetch(url);
@@ -68,14 +76,27 @@ export function FileUpload() {
                             } catch (e) { }
 
                             const file = new File([blob], filename, { type: blob.type });
-                            processFile(file);
+                            const loaded = processFile(file);
+                            if (loaded) successCount++;
                         } catch (err) {
                             console.error(`Failed to load remote file ${url}:`, err);
                         }
                     }
+                    if (successCount > 0) {
+                        setSyncStatus('success');
+                        setSyncMessage(`Sincronizados ${successCount} archivos desde la nube.`);
+                        setTimeout(() => setSyncStatus('idle'), 5000);
+                    } else {
+                        setSyncStatus('idle'); // Should we show error if 0 loaded?
+                    }
+                } else {
+                    setSyncStatus('idle');
+                    setSyncMessage('No hay archivos compartidos recientes.');
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error loading remote files:", error);
+                setSyncStatus('error');
+                setSyncMessage(`Error de sincronización: ${error.message}`);
             }
         };
 
@@ -101,7 +122,7 @@ export function FileUpload() {
             const sheet = workbook.Sheets[sheetName];
             const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-            if (jsonData.length === 0) return;
+            if (jsonData.length === 0) return false;
 
             // Smart Header Detection
             // We scan the first 20 rows to find the one that looks like a header row
@@ -214,7 +235,7 @@ export function FileUpload() {
                 setMappingModalOpen(true);
                 setPendingFiles(prev => [...prev, file]);
                 console.log("Headers detected at row " + headerRowIndex);
-                return;
+                return true;
             }
 
             // If we DO have a mapping, parse the data
@@ -303,10 +324,11 @@ export function FileUpload() {
             });
 
             addTasks(parsedTasks, { startDate: projectStartDate, endDate: projectEndDate });
+            return true;
         };
         reader.readAsArrayBuffer(file);
+        return true;
     };
-
     const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
@@ -363,6 +385,20 @@ export function FileUpload() {
                 <div className="mt-4 flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-full text-sm font-medium">
                     <CheckCircle className="h-4 w-4" />
                     {tasks.length} tareas cargadas exitosamente
+                </div>
+            )}
+
+            {/* Sync Status Feedback */}
+            {syncStatus !== 'idle' && (
+                <div className={cn(
+                    "mt-4 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2",
+                    syncStatus === 'loading' && "bg-blue-50 text-blue-600",
+                    syncStatus === 'success' && "bg-green-50 text-green-600",
+                    syncStatus === 'error' && "bg-red-50 text-red-600"
+                )}>
+                    {syncStatus === 'loading' && <span className="animate-spin">⌛</span>}
+                    {syncStatus === 'error' && <span>⚠️</span>}
+                    {syncMessage}
                 </div>
             )}
 
