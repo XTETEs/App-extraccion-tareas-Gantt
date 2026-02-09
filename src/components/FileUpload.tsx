@@ -37,11 +37,50 @@ export function FileUpload() {
             // Process all pending files
             pendingFiles.forEach(file => {
                 processFile(file);
-                uploadFile(file);
             });
             setPendingFiles([]);
         }
     }, [columnMapping, pendingFiles]);
+
+    // Fetch and load remote files on mount
+    useEffect(() => {
+        const loadRemoteFiles = async () => {
+            try {
+                const res = await fetch('/api/list-gantt');
+                const data = await res.json();
+
+                if (data.urls && Array.isArray(data.urls)) {
+                    // Update list of uploaded blobs for display
+                    setUploadedBlobs(data.urls.map((url: string) => ({ url, pathname: url })));
+
+                    // Process each file
+                    for (const url of data.urls) {
+                        try {
+                            const fileRes = await fetch(url);
+                            const blob = await fileRes.blob();
+                            // Try to extract filename, fallback to generic
+                            let filename = 'remote-gantt.xlsx';
+                            try {
+                                const urlObj = new URL(url);
+                                const pathParts = urlObj.pathname.split('/');
+                                filename = pathParts[pathParts.length - 1] || filename;
+                                filename = decodeURIComponent(filename);
+                            } catch (e) { }
+
+                            const file = new File([blob], filename, { type: blob.type });
+                            processFile(file);
+                        } catch (err) {
+                            console.error(`Failed to load remote file ${url}:`, err);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error loading remote files:", error);
+            }
+        };
+
+        loadRemoteFiles();
+    }, []); // Run once on mount
 
     const processFile = (file: File) => {
         // If we don't have a mapping yet, queue it.
