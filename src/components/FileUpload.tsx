@@ -16,12 +16,29 @@ export function FileUpload() {
         tasks
     } = useStore();
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+    const [uploadedBlobs, setUploadedBlobs] = useState<any[]>([]);
+
+    const uploadFile = async (file: File) => {
+        try {
+            const response = await fetch(`/api/upload?filename=${file.name}`, {
+                method: 'POST',
+                body: file,
+            });
+            const newBlob = await response.json();
+            setUploadedBlobs(prev => [...prev, newBlob]);
+        } catch (error) {
+            console.error('Error uploading file:', error);
+        }
+    };
 
     // Auto-process pending files when mapping is available
     useEffect(() => {
         if (columnMapping && pendingFiles.length > 0) {
             // Process all pending files
-            pendingFiles.forEach(file => processFile(file));
+            pendingFiles.forEach(file => {
+                processFile(file);
+                uploadFile(file);
+            });
             setPendingFiles([]);
         }
     }, [columnMapping, pendingFiles]);
@@ -256,7 +273,10 @@ export function FileUpload() {
         e.stopPropagation();
 
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            Array.from(e.dataTransfer.files).forEach(processFile);
+            Array.from(e.dataTransfer.files).forEach(file => {
+                processFile(file);
+                uploadFile(file);
+            });
             e.dataTransfer.clearData();
         }
     }, [columnMapping, addTasks]);
@@ -282,7 +302,10 @@ export function FileUpload() {
                 accept=".xlsx,.xls,.csv"
                 onChange={(e) => {
                     if (e.target.files && e.target.files.length > 0) {
-                        Array.from(e.target.files).forEach(processFile);
+                        Array.from(e.target.files).forEach(file => {
+                            processFile(file);
+                            uploadFile(file);
+                        });
                         // Reset input so same file can be selected again if needed
                         e.target.value = '';
                     }
@@ -301,6 +324,30 @@ export function FileUpload() {
                 <div className="mt-4 flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-full text-sm font-medium">
                     <CheckCircle className="h-4 w-4" />
                     {tasks.length} tareas cargadas exitosamente
+                </div>
+            )}
+
+            {uploadedBlobs.length > 0 && (
+                <div
+                    className="mt-6 w-full max-w-2xl cursor-default"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <h3 className="text-sm font-medium mb-2">Archivos subidos:</h3>
+                    <div className="space-y-2">
+                        {uploadedBlobs.map((blob, index) => (
+                            <div key={index} className="bg-muted/50 p-3 rounded-md flex items-center justify-between text-sm">
+                                <span className="truncate max-w-[300px]">{blob.url}</span>
+                                <a
+                                    href={blob.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary hover:underline ml-4 flex-shrink-0"
+                                >
+                                    Abrir enlace
+                                </a>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
