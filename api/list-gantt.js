@@ -8,12 +8,17 @@ const redis = new Redis({
 
 export default async function handler(request, response) {
     try {
+        console.log('[list-gantt] Fetching file list from Redis');
         // Obtenemos todos los miembros del set 'gantt_files_set'
         const urls = await redis.smembers('gantt_files_set');
+        console.log('[list-gantt] Found URLs:', urls);
 
-        return response.status(200).json({ urls });
+        return response.status(200).json({ urls: urls || [] });
     } catch (error) {
-        console.error('Error fetching file list:', error);
-        return response.status(500).json({ error: error.message });
+        console.error('[list-gantt] Error fetching file list:', error);
+        return response.status(500).json({
+            error: error.message || 'Failed to fetch file list',
+            urls: [] // Return empty array as fallback
+        });
     }
 }

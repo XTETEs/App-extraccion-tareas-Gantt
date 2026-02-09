@@ -8,17 +8,32 @@ const redis = new Redis({
 });
 
 export default async function handler(request, response) {
-  const { searchParams } = new URL(request.url);
-  const filename = searchParams.get('filename');
+  try {
+    const { searchParams } = new URL(request.url);
+    const filename = searchParams.get('filename');
 
-  // 1. Guardamos el archivo en Vercel Blob
-  // NOTA: Esto requiere la variable BLOB_READ_WRITE_TOKEN en Vercel
-  const blob = await put(filename, request, {
-    access: 'public',
-  });
+    if (!filename) {
+      return response.status(400).json({ error: 'Filename is required' });
+    }
 
-  // 2. Añadimos la URL al SET de archivos en Redis
-  await redis.sadd('gantt_files_set', blob.url);
+    // 1. Guardamos el archivo en Vercel Blob
+    console.log('[upload] Uploading file to Vercel Blob:', filename);
+    const blob = await put(filename, request, {
+      access: 'public',
+    });
+    console.log('[upload] File uploaded successfully:', blob.url);
 
-  return response.status(200).json(blob);
+    // 2. Añadimos la URL al SET de archivos en Redis
+    console.log('[upload] Adding URL to Redis set');
+    await redis.sadd('gantt_files_set', blob.url);
+    console.log('[upload] URL added to Redis successfully');
+
+    return response.status(200).json(blob);
+  } catch (error) {
+    console.error('[upload] Error:', error);
+    return response.status(500).json({
+      error: error.message || 'Upload failed',
+      details: error.toString()
+    });
+  }
 }
