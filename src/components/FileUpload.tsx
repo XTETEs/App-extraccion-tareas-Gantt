@@ -19,6 +19,7 @@ export function FileUpload() {
     const [uploadedBlobs, setUploadedBlobs] = useState<any[]>([]);
     const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [syncMessage, setSyncMessage] = useState<string>('');
+    const [isDragging, setIsDragging] = useState<boolean>(false);
 
     const uploadFile = async (file: File) => {
         try {
@@ -340,9 +341,25 @@ export function FileUpload() {
         reader.readAsArrayBuffer(file);
         return true;
     };
+    const onDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    };
+
+    const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Only set to false if we're leaving the main container
+        if (e.currentTarget === e.target) {
+            setIsDragging(false);
+        }
+    };
+
     const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
+        setIsDragging(false);
 
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             Array.from(e.dataTransfer.files).forEach(file => {
@@ -355,6 +372,7 @@ export function FileUpload() {
 
     const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
+        e.stopPropagation();
     };
 
     return (
@@ -362,8 +380,13 @@ export function FileUpload() {
             onClick={() => inputRef.current?.click()}
             onDrop={onDrop}
             onDragOver={onDragOver}
+            onDragEnter={onDragEnter}
+            onDragLeave={onDragLeave}
             className={cn(
-                "border-2 border-dashed border-muted-foreground/25 rounded-xl p-10 text-center hover:bg-muted/50 transition-colors cursor-pointer flex flex-col items-center gap-4",
+                "border-2 border-dashed rounded-xl p-10 text-center transition-all duration-200 cursor-pointer flex flex-col items-center gap-4",
+                isDragging
+                    ? "border-primary border-4 bg-primary/10 scale-[1.02]"
+                    : "border-muted-foreground/25 hover:bg-muted/50"
             )}
         >
             <input
@@ -388,7 +411,12 @@ export function FileUpload() {
             </div>
             <div>
                 <h3 className="text-lg font-semibold">Cargar archivos Excel</h3>
-                <p className="text-sm text-muted-foreground mt-2">Arrastra o haz clic para seleccionar</p>
+                <p className={cn(
+                    "text-sm mt-2 transition-colors",
+                    isDragging ? "text-primary font-medium" : "text-muted-foreground"
+                )}>
+                    {isDragging ? "¡Suelta los archivos aquí!" : "Arrastra archivos aquí o haz clic para seleccionar"}
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">Soporta .xlsx, .xls, .csv</p>
             </div>
 
