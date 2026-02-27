@@ -6,6 +6,13 @@ import { Calendar, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp } from 'l
 import { cn } from '../lib/utils';
 import { useStore } from '../store/useStore';
 import { Button } from './ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "./ui/tooltip";
+
 
 interface TaskTableProps {
     tasks: Task[];
@@ -177,10 +184,33 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                             <th className="px-6 py-4 font-bold w-16 text-center">Tipo</th>
                                             <th className="px-6 py-4 font-bold w-24">WBS</th>
                                             <th className="px-6 py-4 font-bold">Actividad / Tarea</th>
-                                            <th className="px-6 py-4 font-bold w-32">Cronograma</th>
+                                            <th className="px-6 py-4 font-bold w-32">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50">
+                                                            Cronograma
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" className="max-w-xs">
+                                                            <p>Muestra la posición de la tarea relativa al periodo seleccionado. La barra gris es el periodo total, la barra azul es la duración de la tarea.</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </th>
                                             <th className="px-6 py-4 font-bold">Inicio</th>
                                             <th className="px-6 py-4 font-bold">Fin</th>
-                                            <th className="px-6 py-4 font-bold text-center w-24">Progreso Esperado</th>
+                                            <th className="px-6 py-4 font-bold text-center w-24">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50">
+                                                            Progreso Esperado
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" className="max-w-xs">
+                                                            <p>Porcentaje de la tarea que debería estar completado para la fecha de fin del periodo seleccionado.</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </th>
+
                                             <th className="px-6 py-4 font-bold text-right w-32">Valoración Periodo</th>
                                             <th className="px-6 py-4 font-bold text-center">Estado (Días)</th>
                                         </tr>
