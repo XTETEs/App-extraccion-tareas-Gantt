@@ -237,19 +237,17 @@ export function Dashboard() {
                         </p>
                     </div>
                 )}
-            </div>
-
-            {/* 3. FILE UPLOAD (BOTTOM) */}
-            <div className="w-full border-t border-border/40 pt-8 mt-8">
-                <div className="max-w-2xl mx-auto p-8 border border-dashed border-primary/20 rounded-3xl bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center justify-center text-center">
-                    <h4 className="text-lg font-semibold mb-2">Gestión de Archivos</h4>
-                    <p className="text-muted-foreground mb-6 text-sm">Arrastra tus archivos Excel aquí para actualizar o añadir nuevos proyectos.</p>
-                    <div className="w-full max-w-md bg-background rounded-xl shadow-sm p-1">
-                        <FileUpload />
+                {/* 3. FILE UPLOAD (BOTTOM) */}
+                <div className="w-full border-t border-border/40 pt-8 mt-8">
+                    <div className="max-w-2xl mx-auto p-8 border border-dashed border-primary/20 rounded-3xl bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center justify-center text-center">
+                        <h4 className="text-lg font-semibold mb-2">Gestión de Archivos</h4>
+                        <p className="text-muted-foreground mb-6 text-sm">Arrastra tus archivos Excel aquí para actualizar o añadir nuevos proyectos.</p>
+                        <div className="w-full max-w-md bg-background rounded-xl shadow-sm p-1">
+                            <FileUpload />
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        </div >
     );
 }
