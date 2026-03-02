@@ -231,7 +231,7 @@ export function Dashboard() {
                                 <ListTodo className="h-16 w-16 mb-4 opacity-20" />
                                 <h3 className="text-xl font-semibold mb-2">Esperando extracción</h3>
                                 <p className="max-w-md">
-                                    Ordene las obras en el panel lateral, seleccione un rango de fechas y pulse
+                                    Ordene las obras en el panel lateral, seleccione un rango de fechas (opcional) y pulse
                                     <span className="font-bold text-primary mx-1">"Extraer Tareas"</span>
                                     para generar el informe.
                                 </p>

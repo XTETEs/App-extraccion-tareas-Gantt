@@ -158,11 +158,7 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
                 <div className="mt-4">
                     <button
                         onClick={() => {
-                            if (!dateRange.from && !dateRange.to) {
-                                alert("Por favor seleccione al menos una fecha de inicio o fin.");
-                                return;
-                            }
-                            // Trigger report generation
+                            // Trigger report generation regardless of dates
                             useStore.getState().setReportGenerated(true);
                         }}
                         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-4 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wide"
