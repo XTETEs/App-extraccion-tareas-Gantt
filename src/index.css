@@ -103,23 +103,40 @@
     margin: 10mm;
   }
 
-  /* Hide everything by default */
-  body * {
-    visibility: hidden;
+  /* Reset layout constraints for multi-page printing */
+  html,
+  body,
+  #root,
+  main {
+    height: auto !important;
+    overflow: visible !important;
+    position: static !important;
   }
 
-  /* Show only the Task Detail section */
+  /* Hide everything by default using display: none for cleaner layout */
+  body > * {
+    display: none !important;
+  }
+
+  /* Show only the main application container and specifically the print area */
+  #root,
+  #root > *,
+  main,
   #print-area,
   #print-area * {
-    visibility: visible;
+    display: block !important;
+    visibility: visible !important;
+    overflow: visible !important;
+    position: static !important;
+    height: auto !important;
   }
 
-  #print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    visibility: visible !important;
+  /* Specific rule for the scrollable list container typically inside Dashboard */
+  .custom-scrollbar,
+  .overflow-y-auto {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
   }
 
   /* Force background colors and colors in printing */
@@ -130,14 +147,16 @@
 
   /* Hide interactive elements and buttons in print */
   button,
-  .no-print {
+  .no-print,
+  .no-print * {
     display: none !important;
   }
 
-  /* Ensure the table takes full width */
+  /* Ensure the table takes full width and isn't truncated */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
+    table-layout: auto !important;
   }
 
   /* Avoid page breaks inside rows */
@@ -147,8 +166,16 @@
 
   /* Clean up shadows/borders for print */
   .rounded-xl,
-  .rounded-2xl {
+  .rounded-2xl,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg {
     border-radius: 0 !important;
     box-shadow: none !important;
+  }
+
+  /* Force contrast for text */
+  .text-muted-foreground {
+    color: #666 !important;
   }
 }

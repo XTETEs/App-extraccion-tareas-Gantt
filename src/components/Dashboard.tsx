@@ -77,7 +77,7 @@ export function Dashboard() {
         <div className="flex h-full overflow-hidden bg-background">
 
             {/* Sidebar - Fixed width */}
-            <div className="w-72 hidden md:block h-full shrink-0">
+            <div className="w-72 hidden md:block h-full shrink-0 no-print">
                 <Sidebar
                     projects={projects}
                     selectedProjectId={selectedProjectId}
