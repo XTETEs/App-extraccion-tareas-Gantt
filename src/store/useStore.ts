@@ -149,7 +149,10 @@ export const useStore = create<AppState>((set) => ({
     },
 
     setColumnMapping: (mapping) => set({ columnMapping: mapping }),
-    setDateRange: (range) => set({ dateRange: range }),
+    setDateRange: (range) => set({
+        dateRange: range,
+        isReportGenerated: false // Reset extraction when dates change
+    }),
     setMappingModalOpen: (isOpen) => set({ isMappingModalOpen: isOpen }),
     setRawHeaders: (headers) => set({ rawHeaders: headers }),
 

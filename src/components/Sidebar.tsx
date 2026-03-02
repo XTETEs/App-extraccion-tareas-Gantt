@@ -103,7 +103,7 @@ function SortableProjectItem({ project, selectedProjectId, onSelectProject, hidd
 }
 
 export function Sidebar({ projects, selectedProjectId, onSelectProject }: SidebarProps) {
-    const { dateRange, setDateRange, hiddenProjects, toggleProjectVisibility, reorderProjects } = useStore();
+    const { dateRange, setDateRange, hiddenProjects, toggleProjectVisibility, reorderProjects, setReportGenerated } = useStore();
     const [isManagerOpen, setIsManagerOpen] = useState(false);
 
     const sensors = useSensors(
@@ -158,8 +158,7 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
                 <div className="mt-4">
                     <button
                         onClick={() => {
-                            // Trigger report generation regardless of dates
-                            useStore.getState().setReportGenerated(true);
+                            setReportGenerated(true);
                         }}
                         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-4 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wide"
                     >
