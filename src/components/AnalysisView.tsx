@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { AlertTriangle, CalendarDays, CheckCircle2, Flame, Info } from 'lucide-react';
-import { Tooltip as UITooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { Tooltip as UITooltip, TooltipContent, TooltipTrigger, TooltipProvider } from './ui/tooltip';
 import { format, isBefore, addDays, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { stringToColor, getLeafTasks } from '../lib/utils';
@@ -191,17 +191,21 @@ export function AnalysisView() {
                         <Flame className="h-6 w-6" />
                     </div>
                     <div>
-                        <UITooltip>
-                            <TooltipTrigger asChild>
-                                <div className="flex items-center gap-2 cursor-help group/title">
-                                    <h3 className="text-lg font-bold">Foco Crítico Semanal</h3>
-                                    <Info className="h-4 w-4 text-muted-foreground group-hover/title:text-orange-500 transition-colors" />
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-xs">
-                                <p>Muestra las tareas marcadas como críticas que tienen actividad (inicio, fin o ejecución) dentro del margen de los próximos 7 días naturales.</p>
-                            </TooltipContent>
-                        </UITooltip>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-bold">Foco Crítico Semanal</h3>
+                            <TooltipProvider>
+                                <UITooltip delayDuration={100}>
+                                    <TooltipTrigger asChild>
+                                        <button className="p-1 rounded-full hover:bg-muted transition-colors cursor-help">
+                                            <Info className="h-4 w-4 text-muted-foreground" />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs z-[100]">
+                                        <p>Muestra las tareas marcadas como críticas que tienen actividad (inicio, fin o ejecución) dentro del margen de los próximos 7 días naturales.</p>
+                                    </TooltipContent>
+                                </UITooltip>
+                            </TooltipProvider>
+                        </div>
                         <p className="text-sm text-muted-foreground">Tareas críticas activas en los próximos 7 días</p>
                     </div>
                 </div>
