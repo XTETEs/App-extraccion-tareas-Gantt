@@ -204,8 +204,8 @@ export function BottleneckRadar() {
                                                                             textShadow: '0px 1px 2px rgba(0,0,0,0.5)'
                                                                         }}
                                                                     >
-                                                                        <span className="text-[9px] font-bold truncate shrink-0">{duration}d</span>
                                                                         <span className="text-[8px] font-black opacity-90 shrink-0">S{weekNum}</span>
+                                                                        <span className="text-[9px] font-bold truncate shrink-0">{duration}d</span>
                                                                     </div>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
