@@ -138,9 +138,15 @@ export function BottleneckRadar() {
                                 {projectRows.map((row) => {
                                     return (
                                         <div key={row.name} className="flex border-b border-border/10 group hover:bg-muted/10 transition-colors">
-                                            <div className="w-48 shrink-0 p-3 border-r border-border/40 flex items-center justify-between gap-2 overflow-hidden">
+                                            <div
+                                                className="w-48 shrink-0 p-3 border-r border-border/40 flex items-center justify-between gap-2 overflow-hidden transition-colors"
+                                                style={{
+                                                    backgroundColor: `${stringToColor(row.name)}15`,
+                                                    borderLeft: `4px solid ${stringToColor(row.name)}`
+                                                }}
+                                            >
                                                 <div className="flex items-center gap-2 overflow-hidden">
-                                                    <div className="w-1.5 h-6 rounded-full bg-primary/20 group-hover:bg-primary transition-colors shrink-0" />
+                                                    <div className="h-2.5 w-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: stringToColor(row.name) }} />
                                                     <span className="text-xs font-bold truncate" title={row.name}>{row.name}</span>
                                                 </div>
                                                 <button

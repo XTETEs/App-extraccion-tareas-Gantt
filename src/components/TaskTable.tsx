@@ -3,7 +3,7 @@ import type { Task } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, stringToColor } from '../lib/utils';
 import { useStore } from '../store/useStore';
 import { Button } from './ui/button';
 import {
@@ -135,16 +135,6 @@ export function TaskTable({ tasks }: TaskTableProps) {
 
                 const isCollapsed = collapsedProjects.includes(projectName);
 
-                // Color Generator
-                // Simple hash to HSL
-                const stringToColor = (str: string, saturation = 65, lightness = 50) => {
-                    let hash = 0;
-                    for (let i = 0; i < str.length; i++) {
-                        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-                    }
-                    const h = Math.abs(hash) % 360;
-                    return `hsl(${h}, ${saturation}%, ${lightness}%)`;
-                };
                 const projectColor = stringToColor(projectName);
 
                 return (

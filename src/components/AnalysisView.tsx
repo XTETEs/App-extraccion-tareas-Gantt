@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { AlertTriangle, CalendarDays, CheckCircle2, Flame, Info } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipContent, TooltipTrigger, TooltipProvider } from './ui/tooltip';
 import { format, isBefore, addDays, isWithinInterval } from 'date-fns';
@@ -21,23 +21,29 @@ export function AnalysisView() {
             }
         });
 
-        const grouped: Record<string, { name: string, count: number, sortTime: number, projects: string[] }> = {};
+        const monthGroups: Record<string, { name: string, sortTime: number, [key: string]: any }> = {};
 
         projectEndDates.forEach((date, projectName) => {
             const monthKey = format(date, 'MMM yyyy', { locale: es });
-            if (!grouped[monthKey]) {
-                grouped[monthKey] = {
+            if (!monthGroups[monthKey]) {
+                monthGroups[monthKey] = {
                     name: monthKey,
-                    count: 0,
-                    sortTime: date.getTime(), // Approximate sort by first encounter
-                    projects: []
+                    sortTime: date.getTime(),
+                    projects: [] // Still keep list for tooltip
                 };
             }
-            grouped[monthKey].count++;
-            grouped[monthKey].projects.push(projectName);
+            // Each project gets 1 unit in its own key for stacking
+            monthGroups[monthKey][projectName] = (monthGroups[monthKey][projectName] || 0) + 1;
+            monthGroups[monthKey].projects.push(projectName);
         });
 
-        return Object.values(grouped).sort((a, b) => a.sortTime - b.sortTime);
+        return Object.values(monthGroups).sort((a, b) => a.sortTime - b.sortTime);
+    }, [tasks]);
+
+    const uniqueProjectsInChart = useMemo(() => {
+        const set = new Set<string>();
+        tasks.forEach(t => set.add(t.projectName));
+        return Array.from(set);
     }, [tasks]);
 
 
@@ -128,8 +134,8 @@ export function AnalysisView() {
                                                         ))}
                                                     </div>
                                                     <div className="mt-3 pt-2 border-t border-border/50 font-semibold text-muted-foreground flex justify-between">
-                                                        <span>Total</span>
-                                                        <span>{data.count}</span>
+                                                        <span>Total Obras</span>
+                                                        <span>{data.projects.length}</span>
                                                     </div>
                                                 </div>
                                             );
@@ -137,11 +143,16 @@ export function AnalysisView() {
                                         return null;
                                     }}
                                 />
-                                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} barSize={50}>
-                                    {completionDataEnhanced.map((_entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={index % 2 === 0 ? 'hsl(var(--primary))' : 'hsl(var(--primary)/0.8)'} />
-                                    ))}
-                                </Bar>
+                                {uniqueProjectsInChart.map((projectName) => (
+                                    <Bar
+                                        key={projectName}
+                                        dataKey={projectName}
+                                        stackId="a"
+                                        fill={stringToColor(projectName)}
+                                        radius={[0, 0, 0, 0]}
+                                        barSize={50}
+                                    />
+                                ))}
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
