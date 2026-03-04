@@ -1,0 +1,210 @@
+import { useMemo, useState } from 'react';
+import { useStore } from '../store/useStore';
+import { format, addDays, startOfWeek, endOfWeek, eachWeekOfInterval, differenceInDays } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { AlertTriangle, Calendar, Info, Search } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+
+export function BottleneckRadar() {
+    const { tasks, projects } = useStore();
+    const [selectedTaskName, setSelectedTaskName] = useState<string>('');
+
+    // 1. Extract unique task names for the dropdown
+    const uniqueTaskNames = useMemo(() => {
+        const names = new Set(tasks.map(t => t.name));
+        return Array.from(names).sort((a, b) => a.localeCompare(b));
+    }, [tasks]);
+
+    // 2. Filter tasks by selected name
+    const relevantTasks = useMemo(() => {
+        if (!selectedTaskName) return [];
+        return tasks.filter(t => t.name === selectedTaskName);
+    }, [tasks, selectedTaskName]);
+
+    // 3. Calculate Date Range for the Timeline
+    const timelineRange = useMemo(() => {
+        if (relevantTasks.length === 0) return null;
+
+        const starts = relevantTasks.map(t => t.startDate.getTime());
+        const ends = relevantTasks.map(t => t.endDate.getTime());
+
+        const minDate = new Date(Math.min(...starts));
+        const maxDate = new Date(Math.max(...ends));
+
+        // Pad range to show full weeks
+        const start = startOfWeek(addDays(minDate, -7), { locale: es });
+        const end = endOfWeek(addDays(maxDate, 7), { locale: es });
+
+        const weeks = eachWeekOfInterval({ start, end }, { locale: es });
+
+        return { start, end, weeks };
+    }, [relevantTasks]);
+
+    // 4. Group by project for the rows
+    const projectRows = useMemo(() => {
+        if (!selectedTaskName) return [];
+        const grouped = new Map<string, typeof relevantTasks>();
+        relevantTasks.forEach(t => {
+            const existing = grouped.get(t.projectName) || [];
+            grouped.set(t.projectName, [...existing, t]);
+        });
+
+        return Array.from(grouped.entries()).map(([name, projectTasks]) => ({
+            name,
+            tasks: projectTasks,
+            order: projects.find(p => p.name === name)?.order ?? 999
+        })).sort((a, b) => a.order - b.order);
+    }, [relevantTasks, selectedTaskName, projects]);
+
+    if (tasks.length === 0) return null;
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Header & Selector */}
+            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold">Radar de Cuellos de Botella</h3>
+                            <p className="text-sm text-muted-foreground">Analiza solapes de una misma partida en todas las obras</p>
+                        </div>
+                    </div>
+
+                    <div className="relative w-full md:w-80">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <select
+                            value={selectedTaskName}
+                            onChange={(e) => setSelectedTaskName(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                        >
+                            <option value="">Selecciona una tarea...</option>
+                            {uniqueTaskNames.map(name => (
+                                <option key={name} value={name}>{name}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {selectedTaskName ? (
+                relevantTasks.length > 0 && timelineRange ? (
+                    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+                        {/* Timeline Toolbar */}
+                        <div className="p-4 bg-muted/30 border-b border-border/40 flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span>Vista Semanal: {format(timelineRange.start, 'dd MMM yyyy')} - {format(timelineRange.end, 'dd MMM yyyy')}</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-3 h-3 rounded-sm bg-primary" />
+                                    <span>Programado</span>
+                                </div>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Info className="h-4 w-4 cursor-help" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="max-w-xs">Las barras muestran el intervalo desde el inicio hasta el fin de la tarea en cada obra. Los solapes verticales indican posibles saturación de recursos.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                        </div>
+
+                        {/* Timeline Grid */}
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <div className="min-w-[800px]">
+                                {/* Header: Dates */}
+                                <div className="flex border-b border-border/20">
+                                    <div className="w-48 shrink-0 p-3 bg-muted/10 border-r border-border/40 font-bold text-[10px] uppercase">Obra</div>
+                                    <div className="flex-1 flex">
+                                        {timelineRange.weeks.map((week, idx) => (
+                                            <div key={idx} className="flex-1 min-w-[60px] p-2 text-center border-r border-border/10 text-[9px] text-muted-foreground font-medium">
+                                                {format(week, 'dd MMM', { locale: es })}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Rows: Projects */}
+                                {projectRows.map((row) => (
+                                    <div key={row.name} className="flex border-b border-border/10 group hover:bg-muted/10 transition-colors">
+                                        <div className="w-48 shrink-0 p-3 border-r border-border/40 flex items-center gap-2 overflow-hidden">
+                                            <div className="w-1.5 h-6 rounded-full bg-primary/20 group-hover:bg-primary transition-colors shrink-0" />
+                                            <span className="text-xs font-bold truncate" title={row.name}>{row.name}</span>
+                                        </div>
+                                        <div className="flex-1 relative flex h-12 items-center">
+                                            {/* Columns background */}
+                                            <div className="absolute inset-0 flex">
+                                                {timelineRange.weeks.map((_, idx) => (
+                                                    <div key={idx} className="flex-1 border-r border-border/5" />
+                                                ))}
+                                            </div>
+
+                                            {/* Task Bars */}
+                                            {row.tasks.map((task) => {
+                                                const totalDays = differenceInDays(timelineRange.end, timelineRange.start);
+                                                const startOffset = differenceInDays(task.startDate, timelineRange.start);
+                                                const duration = differenceInDays(task.endDate, task.startDate) + 1;
+
+                                                const left = `${(startOffset / totalDays) * 100}%`;
+                                                const width = `${(duration / totalDays) * 100}%`;
+
+                                                return (
+                                                    <TooltipProvider key={task.id}>
+                                                        <Tooltip delayDuration={100}>
+                                                            <TooltipTrigger asChild>
+                                                                <div
+                                                                    className="absolute h-6 bg-primary/80 hover:bg-primary rounded-md shadow-sm border border-primary/20 cursor-pointer transition-all hover:scale-[1.02] flex items-center px-2 overflow-hidden"
+                                                                    style={{ left, width }}
+                                                                >
+                                                                    <span className="text-[9px] text-primary-foreground font-bold truncate">{duration}d</span>
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
+                                                                <div className="space-y-1">
+                                                                    <p className="font-bold text-sm">{row.name}</p>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        {format(task.startDate, 'dd/MM/yyyy')} - {format(task.endDate, 'dd/MM/yyyy')}
+                                                                    </p>
+                                                                    <p className="text-xs font-semibold">{duration} días naturales</p>
+                                                                </div>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Summary Footer */}
+                        <div className="p-4 bg-muted/20 border-t border-border/40 text-[11px] text-muted-foreground flex justify-between">
+                            <span>Total de obras involucradas: {projectRows.length}</span>
+                            <span className="italic">Visualización basada en la duración total de la partida por obra</span>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="py-20 text-center bg-card/30 rounded-2xl border border-dashed border-border/50">
+                        <p className="text-muted-foreground">No se han encontrado tareas con ese nombre.</p>
+                    </div>
+                )
+            ) : (
+                <div className="py-20 flex flex-col items-center justify-center text-center bg-card/30 rounded-2xl border border-dashed border-border/50">
+                    <Search className="h-10 w-10 text-muted-foreground opacity-20 mb-4" />
+                    <h4 className="text-lg font-semibold text-muted-foreground">Selecciona una tarea para comenzar</h4>
+                    <p className="max-w-xs text-sm text-muted-foreground mt-2">
+                        Elige una partida del desplegable superior para analizar su carga de trabajo en todas las obras activas.
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}

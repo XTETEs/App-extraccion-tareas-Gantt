@@ -6,14 +6,14 @@ import { FileUpload } from './FileUpload';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 // Dashboard component orchestrator
 import { ListTodo, Zap, LayoutDashboard, Printer } from 'lucide-react';
-import { AnalysisView } from './AnalysisView';
+import { AnalysisView, BottleneckRadar } from './';
 import { Button } from './ui/button';
 import { stringToColor, getLeafTasks } from '../lib/utils'; // Keep this if used outside or re-import if needed
 
 export function Dashboard() {
     const { tasks, projects, dateRange, hiddenProjects, isReportGenerated } = useStore();
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'gantt' | 'analysis'>('gantt');
+    const [viewMode, setViewMode] = useState<'gantt' | 'analysis' | 'radar'>('gantt');
 
     // Use projects from store which are ordered via Drag & Drop
 
@@ -103,12 +103,20 @@ export function Dashboard() {
                         >
                             Análisis
                         </button>
+                        <button
+                            onClick={() => setViewMode('radar')}
+                            className={`px-4 text-sm font-medium py-1.5 rounded-md transition-all ${viewMode === 'radar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                        >
+                            Radar
+                        </button>
                     </div>
                 </div>
 
                 {isReportGenerated ? (
                     viewMode === 'analysis' ? (
                         <AnalysisView />
+                    ) : viewMode === 'radar' ? (
+                        <BottleneckRadar />
                     ) : (
                         <>
                             {/* KPI Cards - Modern Grid */}
