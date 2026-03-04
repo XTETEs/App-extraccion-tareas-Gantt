@@ -32,12 +32,12 @@ export function BottleneckRadar() {
         const minDate = new Date(Math.min(...starts));
         const maxDate = new Date(Math.max(...ends));
 
-        // Use a 6-month window as requested by the user
+        // Use a 3-month window as requested by the user
         // Start 1 month before the earliest task
         const startRaw = subMonths(minDate, 1);
-        // End is at least 6 months after the startRaw, but also covers the maxDate
-        const sixMonthsAfterStart = addMonths(startRaw, 6);
-        const endRaw = maxDate > sixMonthsAfterStart ? maxDate : sixMonthsAfterStart;
+        // End is at least 3 months after the startRaw, but also covers the maxDate
+        const threeMonthsAfterStart = addMonths(startRaw, 3);
+        const endRaw = maxDate > threeMonthsAfterStart ? maxDate : threeMonthsAfterStart;
 
         // Pad range to show full weeks
         const start = startOfWeek(startRaw, { locale: es });
