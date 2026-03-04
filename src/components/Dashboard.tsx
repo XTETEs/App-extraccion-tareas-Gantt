@@ -8,12 +8,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { ListTodo, Zap, LayoutDashboard, Printer } from 'lucide-react';
 import { AnalysisView, BottleneckRadar } from './';
 import { Button } from './ui/button';
-import { stringToColor, getLeafTasks } from '../lib/utils'; // Keep this if used outside or re-import if needed
+import { cn, stringToColor, getLeafTasks } from '../lib/utils'; // Keep this if used outside or re-import if needed
 
 export function Dashboard() {
     const { tasks, projects, dateRange, hiddenProjects, isReportGenerated } = useStore();
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'gantt' | 'analysis' | 'radar'>('gantt');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Use projects from store which are ordered via Drag & Drop
 
@@ -74,10 +75,10 @@ export function Dashboard() {
     }).filter(d => d.total > 0);
 
     return (
-        <div className="flex h-full overflow-hidden bg-background">
+        <div className="flex h-full overflow-hidden bg-background relative">
 
-            {/* Sidebar - Fixed width */}
-            <div className="w-72 hidden md:block h-full shrink-0 no-print">
+            {/* Sidebar - Desktop */}
+            <div className="w-72 hidden lg:block h-full shrink-0 no-print">
                 <Sidebar
                     projects={projects}
                     selectedProjectId={selectedProjectId}
@@ -85,27 +86,59 @@ export function Dashboard() {
                 />
             </div>
 
-            {/* Main Content - Scrollable */}
-            <div className="flex-1 h-full overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-8">
+            {/* Sidebar - Mobile Drawer */}
+            <div className={cn(
+                "fixed inset-0 z-50 lg:hidden transition-opacity duration-300 no-print",
+                isSidebarOpen ? "bg-black/60 backdrop-blur-sm pointer-events-auto" : "bg-black/0 pointer-events-none"
+            )} onClick={() => setIsSidebarOpen(false)}>
+                <div
+                    className={cn(
+                        "w-72 h-full bg-background transition-transform duration-300 ease-in-out",
+                        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <Sidebar
+                        projects={projects}
+                        selectedProjectId={selectedProjectId}
+                        onSelectProject={(id) => {
+                            setSelectedProjectId(id);
+                            setIsSidebarOpen(false);
+                        }}
+                    />
+                </div>
+            </div>
 
-                <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-                    <div className="flex bg-muted/50 p-1 rounded-lg">
+            {/* Main Content - Scrollable */}
+            <div className="flex-1 h-full overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-6 md:space-y-8">
+
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <button
+                            className="lg:hidden p-2 hover:bg-muted rounded-lg transition-colors no-print"
+                            onClick={() => setIsSidebarOpen(true)}
+                        >
+                            <LayoutDashboard className="h-6 w-6" />
+                        </button>
+                        <h2 className="text-xl md:text-2xl font-bold tracking-tight">Dashboard</h2>
+                    </div>
+
+                    <div className="flex bg-muted/50 p-1 rounded-lg self-start md:self-auto overflow-x-auto max-w-full no-print">
                         <button
                             onClick={() => setViewMode('gantt')}
-                            className={`px-4 text-sm font-medium py-1.5 rounded-md transition-all ${viewMode === 'gantt' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`px-3 md:px-4 text-xs md:text-sm font-medium py-1.5 rounded-md transition-all whitespace-nowrap ${viewMode === 'gantt' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             Operaciones
                         </button>
                         <button
                             onClick={() => setViewMode('analysis')}
-                            className={`px-4 text-sm font-medium py-1.5 rounded-md transition-all ${viewMode === 'analysis' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`px-3 md:px-4 text-xs md:text-sm font-medium py-1.5 rounded-md transition-all whitespace-nowrap ${viewMode === 'analysis' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             Análisis
                         </button>
                         <button
                             onClick={() => setViewMode('radar')}
-                            className={`px-4 text-sm font-medium py-1.5 rounded-md transition-all ${viewMode === 'radar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`px-3 md:px-4 text-xs md:text-sm font-medium py-1.5 rounded-md transition-all whitespace-nowrap ${viewMode === 'radar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             Radar
                         </button>
@@ -231,8 +264,8 @@ export function Dashboard() {
                     </div>
                 )}
                 {/* 3. FILE UPLOAD (BOTTOM) */}
-                <div className="w-full border-t border-border/40 pt-8 mt-8">
-                    <div className="max-w-2xl mx-auto p-8 border border-dashed border-primary/20 rounded-3xl bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center justify-center text-center">
+                <div className="w-full border-t border-border/40 pt-8 mt-8 no-print">
+                    <div className="max-w-2xl mx-auto p-4 md:p-8 border border-dashed border-primary/20 rounded-3xl bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center justify-center text-center">
                         <h4 className="text-lg font-semibold mb-2">Gestión de Archivos</h4>
                         <p className="text-muted-foreground mb-6 text-sm">Arrastra tus archivos Excel aquí para actualizar o añadir nuevos proyectos.</p>
                         <div className="w-full max-w-md bg-background rounded-xl shadow-sm p-1">

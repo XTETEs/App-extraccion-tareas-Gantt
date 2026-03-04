@@ -136,7 +136,7 @@ export function BottleneckRadar() {
                             <div className="min-w-[800px]">
                                 {/* Header: Dates */}
                                 <div className="flex border-b border-border/20">
-                                    <div className="w-48 shrink-0 p-3 bg-muted/10 border-r border-border/40 font-bold text-[10px] uppercase">Obra</div>
+                                    <div className="w-32 md:w-48 shrink-0 p-3 bg-muted/10 border-r border-border/40 font-bold text-[10px] uppercase">Obra</div>
                                     <div className="flex-1 flex">
                                         {timelineRange.weeks.map((week, idx) => (
                                             <div key={idx} className="flex-1 min-w-[60px] p-2 text-center border-r border-border/10 text-[9px] text-muted-foreground font-medium">
@@ -151,7 +151,7 @@ export function BottleneckRadar() {
                                     return (
                                         <div key={row.name} className="flex border-b border-border/10 group hover:bg-muted/10 transition-colors">
                                             <div
-                                                className="w-48 shrink-0 p-3 border-r border-border/40 flex items-center justify-between gap-2 overflow-hidden transition-colors"
+                                                className="w-32 md:w-48 shrink-0 p-3 border-r border-border/40 flex items-center justify-between gap-1 overflow-hidden transition-colors"
                                                 style={{
                                                     backgroundColor: `${stringToColor(row.name)}15`,
                                                     borderLeft: `4px solid ${stringToColor(row.name)}`

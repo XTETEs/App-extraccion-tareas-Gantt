@@ -60,7 +60,7 @@ function SortableProjectItem({ project, selectedProjectId, onSelectProject, hidd
             <div
                 {...attributes}
                 {...listeners}
-                className="p-1.5 rounded-md cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground opacity-0 group-hover/item:opacity-100 transition-opacity touch-none"
+                className="p-1.5 rounded-md cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground md:opacity-0 md:group-hover/item:opacity-100 transition-opacity touch-none"
                 title="Reordenar"
             >
                 <GripVertical className="h-3.5 w-3.5" />

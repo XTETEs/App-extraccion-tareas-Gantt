@@ -221,7 +221,7 @@ export function AnalysisView() {
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-border/50">
+                <div className="overflow-x-auto custom-scrollbar rounded-xl border border-border/50">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-muted/50 text-muted-foreground uppercase text-xs font-semibold">
                             <tr>
