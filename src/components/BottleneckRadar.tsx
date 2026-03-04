@@ -4,6 +4,7 @@ import { format, addDays, startOfWeek, endOfWeek, eachWeekOfInterval, difference
 import { es } from 'date-fns/locale';
 import { AlertTriangle, Calendar, Info, Search } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { stringToColor } from '../lib/utils';
 
 export function BottleneckRadar() {
     const { tasks, projects, radarSelectedTask, setRadarSelectedTask } = useStore();
@@ -154,15 +155,24 @@ export function BottleneckRadar() {
                                                 const left = `${(startOffset / totalDays) * 100}%`;
                                                 const width = `${(duration / totalDays) * 100}%`;
 
+                                                const projectColor = stringToColor(row.name);
+
                                                 return (
                                                     <TooltipProvider key={task.id}>
                                                         <Tooltip delayDuration={100}>
                                                             <TooltipTrigger asChild>
                                                                 <div
-                                                                    className="absolute h-6 bg-primary/80 hover:bg-primary rounded-md shadow-sm border border-primary/20 cursor-pointer transition-all hover:scale-[1.02] flex items-center px-2 overflow-hidden"
-                                                                    style={{ left, width }}
+                                                                    className="absolute h-6 rounded-md shadow-sm border cursor-pointer transition-all hover:scale-[1.02] flex items-center px-2 overflow-hidden"
+                                                                    style={{
+                                                                        left,
+                                                                        width,
+                                                                        backgroundColor: `${projectColor}dd`,
+                                                                        borderColor: projectColor,
+                                                                        color: '#fff',
+                                                                        textShadow: '0px 1px 2px rgba(0,0,0,0.2)'
+                                                                    }}
                                                                 >
-                                                                    <span className="text-[9px] text-primary-foreground font-bold truncate">{duration}d</span>
+                                                                    <span className="text-[9px] font-bold truncate">{duration}d</span>
                                                                 </div>
                                                             </TooltipTrigger>
                                                             <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
