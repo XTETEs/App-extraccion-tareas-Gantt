@@ -11,7 +11,7 @@ import { Button } from './ui/button';
 import { stringToColor, getLeafTasks } from '../lib/utils'; // Keep this if used outside or re-import if needed
 
 export function Dashboard() {
-    const { tasks, projects, dateRange, hiddenProjects, clearData, isReportGenerated } = useStore();
+    const { tasks, projects, dateRange, hiddenProjects, isReportGenerated } = useStore();
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'gantt' | 'analysis'>('gantt');
 
@@ -83,21 +83,6 @@ export function Dashboard() {
                     selectedProjectId={selectedProjectId}
                     onSelectProject={setSelectedProjectId}
                 />
-
-                <div className="p-4 border-t border-border/40 mt-4">
-                    <Button
-                        variant="destructive"
-                        className="w-full"
-                        onClick={() => {
-                            if (window.confirm('¿Estás seguro de que quieres borrar TODOS los datos y archivos compartidos? Esta acción eliminará los proyectos de este dispositivo y de la nube de forma permanente.')) {
-                                clearData();
-                                setSelectedProjectId(null); // Reset selected project after clearing data
-                            }
-                        }}
-                    >
-                        Clear All Data
-                    </Button>
-                </div>
             </div>
 
             {/* Main Content - Scrollable */}

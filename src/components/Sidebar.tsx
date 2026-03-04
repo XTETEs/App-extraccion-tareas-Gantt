@@ -4,6 +4,7 @@ import { cn } from '../lib/utils';
 import { Building2, Layers, Calendar as CalendarIcon, Eye, EyeOff, Settings2, GripVertical } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ProjectManagerModal } from './ProjectManagerModal';
+import { Button } from './ui/button';
 import {
     DndContext,
     closestCenter,
@@ -103,7 +104,7 @@ function SortableProjectItem({ project, selectedProjectId, onSelectProject, hidd
 }
 
 export function Sidebar({ projects, selectedProjectId, onSelectProject }: SidebarProps) {
-    const { dateRange, setDateRange, hiddenProjects, toggleProjectVisibility, reorderProjects, setReportGenerated } = useStore();
+    const { dateRange, setDateRange, hiddenProjects, toggleProjectVisibility, reorderProjects, setReportGenerated, clearData } = useStore();
     const [isManagerOpen, setIsManagerOpen] = useState(false);
 
     const sensors = useSensors(
@@ -222,6 +223,22 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
                         </SortableContext>
                     </DndContext>
                 </div>
+            </div>
+
+            {/* Clear All Data Button - Fixed at bottom of sidebar */}
+            <div className="pt-4 mt-4 border-t border-border/40">
+                <Button
+                    variant="destructive"
+                    className="w-full shadow-lg shadow-destructive/10"
+                    onClick={() => {
+                        if (window.confirm('¿Estás seguro de que quieres borrar TODOS los datos y archivos compartidos? Esta acción eliminará los proyectos de este dispositivo y de la nube de forma permanente.')) {
+                            clearData();
+                            onSelectProject(null); // Reset selection
+                        }
+                    }}
+                >
+                    ELIMINAR TODO
+                </Button>
             </div>
         </div>
     );
