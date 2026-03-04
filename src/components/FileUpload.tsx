@@ -421,9 +421,28 @@ export function FileUpload() {
             </div>
 
             {tasks.length > 0 && (
-                <div className="mt-4 flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-full text-sm font-medium">
-                    <CheckCircle className="h-4 w-4" />
-                    {tasks.length} tareas cargadas exitosamente
+                <div className="mt-4 flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-full text-sm font-medium">
+                        <CheckCircle className="h-4 w-4" />
+                        {tasks.length} tareas cargadas exitosamente
+                    </div>
+                </div>
+            )}
+
+            {uploadedBlobs.length > 0 && (
+                <div className="mt-2 text-center">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('¿Deseas eliminar todos los archivos de la nube? Esto no borrará tus datos locales actuales, pero los archivos no se restaurarán automáticamente al reiniciar.')) {
+                                useStore.getState().clearRemoteFiles();
+                                setUploadedBlobs([]);
+                            }
+                        }}
+                        className="text-xs text-destructive hover:underline font-medium"
+                    >
+                        Limpiar archivos compartidos en la nube
+                    </button>
                 </div>
             )}
 

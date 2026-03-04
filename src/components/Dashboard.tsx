@@ -89,7 +89,7 @@ export function Dashboard() {
                         variant="destructive"
                         className="w-full"
                         onClick={() => {
-                            if (window.confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                            if (window.confirm('¿Estás seguro de que quieres borrar TODOS los datos y archivos compartidos? Esta acción eliminará los proyectos de este dispositivo y de la nube de forma permanente.')) {
                                 clearData();
                                 setSelectedProjectId(null); // Reset selected project after clearing data
                             }

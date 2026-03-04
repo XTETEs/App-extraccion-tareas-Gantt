@@ -32,6 +32,7 @@ interface AppState {
     loadFromDB: () => Promise<void>;
     clearData: () => Promise<void>;
     deleteProjects: (projectNames: string[]) => Promise<void>;
+    clearRemoteFiles: () => Promise<void>;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -214,9 +215,29 @@ export const useStore = create<AppState>((set) => ({
         try {
             await db.tasks.clear();
             await db.projects.clear();
+
+            // Also try to clear remote files
+            const state = useStore.getState();
+            await state.clearRemoteFiles();
+
             set({ tasks: [], projects: [], columnMapping: null, rawHeaders: [], hiddenProjects: [], isReportGenerated: false });
         } catch (error) {
             console.error("Failed to clear DB:", error);
+        }
+    },
+
+    clearRemoteFiles: async () => {
+        try {
+            console.log('[Store] Calling clear-files API');
+            const response = await fetch('/api/clear-files', {
+                method: 'POST',
+            });
+            if (!response.ok) {
+                throw new Error('Failed to clear remote files');
+            }
+            console.log('[Store] Remote files cleared successfully');
+        } catch (error) {
+            console.error('[Store] Error clearing remote files:', error);
         }
     },
 
