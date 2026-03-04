@@ -133,6 +133,7 @@
 
   /* Specific rule for the scrollable list container typically inside Dashboard */
   .custom-scrollbar,
+  .overflow-x-auto,
   .overflow-y-auto {
     overflow: visible !important;
     height: auto !important;

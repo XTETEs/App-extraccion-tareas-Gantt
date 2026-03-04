@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { format, addDays, startOfWeek, endOfWeek, eachWeekOfInterval, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AlertTriangle, Calendar, Info, Search, Eye } from 'lucide-react';
+import { AlertTriangle, Calendar, Info, Search, Eye, Printer } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { stringToColor } from '../lib/utils';
+import { Button } from './ui/button';
 
 export function BottleneckRadar() {
     const { tasks, projects, radarSelectedTask, setRadarSelectedTask, hiddenProjects, toggleProjectVisibility } = useStore();
@@ -76,25 +77,36 @@ export function BottleneckRadar() {
                         </div>
                     </div>
 
-                    <div className="relative w-full md:w-80">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <select
-                            value={radarSelectedTask}
-                            onChange={(e) => setRadarSelectedTask(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.print()}
+                            className="flex items-center gap-2 no-print"
                         >
-                            <option value="">Selecciona una tarea...</option>
-                            {uniqueTaskNames.map(name => (
-                                <option key={name} value={name}>{name}</option>
-                            ))}
-                        </select>
+                            <Printer className="h-4 w-4" />
+                            Imprimir Radar
+                        </Button>
+                        <div className="relative w-full md:w-80">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <select
+                                value={radarSelectedTask}
+                                onChange={(e) => setRadarSelectedTask(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                            >
+                                <option value="">Selecciona una tarea...</option>
+                                {uniqueTaskNames.map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {radarSelectedTask ? (
                 relevantTasks.length > 0 && timelineRange ? (
-                    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+                    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col" id="print-area">
                         {/* Timeline Toolbar */}
                         <div className="p-4 bg-muted/30 border-b border-border/40 flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             <div className="flex items-center gap-2">
