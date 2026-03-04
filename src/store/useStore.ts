@@ -222,16 +222,30 @@ export const useStore = create<AppState>((set) => ({
 
     deleteProjects: async (projectNames) => {
         try {
-            // Delete from DB
-            await db.tasks.where('projectName').anyOf(projectNames).delete();
-            await db.projects.bulkDelete(projectNames);
+            const state = useStore.getState();
+            const isDeletingAll = projectNames.length === state.projects.length;
+
+            if (isDeletingAll) {
+                // More efficient and reliable for "delete all"
+                await db.tasks.clear();
+                await db.projects.clear();
+            } else {
+                // Delete specific projects from DB
+                await db.tasks.where('projectName').anyOf(projectNames).delete();
+                await db.projects.bulkDelete(projectNames);
+            }
 
             // Update State
-            set((state) => ({
-                tasks: state.tasks.filter(t => !projectNames.includes(t.projectName)),
-                projects: state.projects.filter(p => !projectNames.includes(p.id)),
-                hiddenProjects: state.hiddenProjects.filter(id => !projectNames.includes(id))
-            }));
+            set((state) => {
+                const remainingProjects = state.projects.filter(p => !projectNames.includes(p.id));
+                return {
+                    tasks: state.tasks.filter(t => !projectNames.includes(t.projectName)),
+                    projects: remainingProjects,
+                    hiddenProjects: state.hiddenProjects.filter(id => !projectNames.includes(id)),
+                    // If no projects left, reset the report generation state
+                    isReportGenerated: remainingProjects.length > 0 ? state.isReportGenerated : false
+                };
+            });
         } catch (error) {
             console.error("Failed to delete projects:", error);
         }

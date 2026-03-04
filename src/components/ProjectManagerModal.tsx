@@ -13,34 +13,44 @@ export function ProjectManagerModal({ isOpen, onClose }: ProjectManagerModalProp
     const { projects: storedProjects, deleteProjects } = useStore();
     const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
 
-    // Use stored projects (preserving order or resorting if needed, but let's keep array order)
-    const projects = storedProjects.map(p => p.name);
+    // Use stored projects
+    const projects = storedProjects;
 
     if (!isOpen) return null;
 
-    const toggleSelection = (project: string) => {
+    const toggleSelection = (projectId: string) => {
         setSelectedProjects(prev =>
-            prev.includes(project)
-                ? prev.filter(p => p !== project)
-                : [...prev, project]
+            prev.includes(projectId)
+                ? prev.filter(p => p !== projectId)
+                : [...prev, projectId]
         );
     };
 
     const toggleAll = () => {
-        if (selectedProjects.length === projects.length) {
+        if (selectedProjects.length === projects.length && projects.length > 0) {
             setSelectedProjects([]);
         } else {
-            setSelectedProjects(projects);
+            setSelectedProjects(projects.map(p => p.id));
         }
     };
 
     const handleDelete = async () => {
         if (selectedProjects.length === 0) return;
 
-        if (window.confirm(`¿Estás seguro de que quieres eliminar ${selectedProjects.length} proyectos? Esta acción no se puede deshacer.`)) {
-            await deleteProjects(selectedProjects);
-            setSelectedProjects([]);
-            onClose();
+        const count = selectedProjects.length;
+        const message = count === projects.length
+            ? `¿Estás seguro de que quieres eliminar TODAS las obras (${count})? Esta acción no se puede deshacer.`
+            : `¿Estás seguro de que quieres eliminar ${count} proyectos? Esta acción no se puede deshacer.`;
+
+        if (window.confirm(message)) {
+            try {
+                await deleteProjects(selectedProjects);
+                setSelectedProjects([]);
+                onClose();
+            } catch (error) {
+                console.error("Error deleting projects:", error);
+                alert("Hubo un error al eliminar los proyectos.");
+            }
         }
     };
 
@@ -83,11 +93,11 @@ export function ProjectManagerModal({ isOpen, onClose }: ProjectManagerModalProp
                             </div>
 
                             {projects.map(project => {
-                                const isSelected = selectedProjects.includes(project);
+                                const isSelected = selectedProjects.includes(project.id);
                                 return (
                                     <div
-                                        key={project}
-                                        onClick={() => toggleSelection(project)}
+                                        key={project.id}
+                                        onClick={() => toggleSelection(project.id)}
                                         className={cn(
                                             "flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200 group select-none",
                                             isSelected
@@ -103,7 +113,7 @@ export function ProjectManagerModal({ isOpen, onClose }: ProjectManagerModalProp
                                         )}>
                                             <CheckSquare className="h-3.5 w-3.5" />
                                         </div>
-                                        <span className="text-sm font-medium flex-1 truncate">{project}</span>
+                                        <span className="text-sm font-medium flex-1 truncate">{project.name}</span>
                                     </div>
                                 );
                             })}
