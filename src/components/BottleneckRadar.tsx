@@ -2,12 +2,12 @@ import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { format, addDays, startOfWeek, endOfWeek, eachWeekOfInterval, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AlertTriangle, Calendar, Info, Search } from 'lucide-react';
+import { AlertTriangle, Calendar, Info, Search, Eye, EyeOff } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { stringToColor } from '../lib/utils';
+import { stringToColor, cn } from '../lib/utils';
 
 export function BottleneckRadar() {
-    const { tasks, projects, radarSelectedTask, setRadarSelectedTask } = useStore();
+    const { tasks, projects, radarSelectedTask, setRadarSelectedTask, hiddenProjects, toggleProjectVisibility } = useStore();
 
     // 1. Extract unique task names for the dropdown
     const uniqueTaskNames = useMemo(() => {
@@ -132,65 +132,77 @@ export function BottleneckRadar() {
                                 </div>
 
                                 {/* Rows: Projects */}
-                                {projectRows.map((row) => (
-                                    <div key={row.name} className="flex border-b border-border/10 group hover:bg-muted/10 transition-colors">
-                                        <div className="w-48 shrink-0 p-3 border-r border-border/40 flex items-center gap-2 overflow-hidden">
-                                            <div className="w-1.5 h-6 rounded-full bg-primary/20 group-hover:bg-primary transition-colors shrink-0" />
-                                            <span className="text-xs font-bold truncate" title={row.name}>{row.name}</span>
-                                        </div>
-                                        <div className="flex-1 relative flex h-12 items-center">
-                                            {/* Columns background */}
-                                            <div className="absolute inset-0 flex">
-                                                {timelineRange.weeks.map((_, idx) => (
-                                                    <div key={idx} className="flex-1 border-r border-border/5" />
-                                                ))}
+                                {projectRows.map((row) => {
+                                    const isHidden = hiddenProjects.includes(row.name);
+
+                                    return (
+                                        <div key={row.name} className={cn("flex border-b border-border/10 group hover:bg-muted/10 transition-colors", isHidden && "opacity-40 grayscale-[0.5]")}>
+                                            <div className="w-48 shrink-0 p-3 border-r border-border/40 flex items-center justify-between gap-2 overflow-hidden">
+                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                    <div className="w-1.5 h-6 rounded-full bg-primary/20 group-hover:bg-primary transition-colors shrink-0" />
+                                                    <span className="text-xs font-bold truncate" title={row.name}>{row.name}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => toggleProjectVisibility(row.name)}
+                                                    className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-foreground shrink-0"
+                                                >
+                                                    {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                                </button>
                                             </div>
+                                            <div className="flex-1 relative flex h-12 items-center">
+                                                {/* Columns background */}
+                                                <div className="absolute inset-0 flex">
+                                                    {timelineRange.weeks.map((_, idx) => (
+                                                        <div key={idx} className="flex-1 border-r border-border/5" />
+                                                    ))}
+                                                </div>
 
-                                            {/* Task Bars */}
-                                            {row.tasks.map((task) => {
-                                                const totalDays = differenceInDays(timelineRange.end, timelineRange.start);
-                                                const startOffset = differenceInDays(task.startDate, timelineRange.start);
-                                                const duration = differenceInDays(task.endDate, task.startDate) + 1;
+                                                {/* Task Bars */}
+                                                {row.tasks.map((task) => {
+                                                    const totalDays = differenceInDays(timelineRange.end, timelineRange.start);
+                                                    const startOffset = differenceInDays(task.startDate, timelineRange.start);
+                                                    const duration = differenceInDays(task.endDate, task.startDate) + 1;
 
-                                                const left = `${(startOffset / totalDays) * 100}%`;
-                                                const width = `${(duration / totalDays) * 100}%`;
+                                                    const left = `${(startOffset / totalDays) * 100}%`;
+                                                    const width = `${(duration / totalDays) * 100}%`;
 
-                                                const projectColor = stringToColor(row.name);
+                                                    const projectColor = stringToColor(row.name);
 
-                                                return (
-                                                    <TooltipProvider key={task.id}>
-                                                        <Tooltip delayDuration={100}>
-                                                            <TooltipTrigger asChild>
-                                                                <div
-                                                                    className="absolute h-6 rounded-md shadow-sm border cursor-pointer transition-all hover:scale-[1.02] flex items-center px-2 overflow-hidden"
-                                                                    style={{
-                                                                        left,
-                                                                        width,
-                                                                        backgroundColor: `${projectColor}dd`,
-                                                                        borderColor: projectColor,
-                                                                        color: '#fff',
-                                                                        textShadow: '0px 1px 2px rgba(0,0,0,0.2)'
-                                                                    }}
-                                                                >
-                                                                    <span className="text-[9px] font-bold truncate">{duration}d</span>
-                                                                </div>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
-                                                                <div className="space-y-1">
-                                                                    <p className="font-bold text-sm">{row.name}</p>
-                                                                    <p className="text-xs text-muted-foreground">
-                                                                        {format(task.startDate, 'dd/MM/yyyy')} - {format(task.endDate, 'dd/MM/yyyy')}
-                                                                    </p>
-                                                                    <p className="text-xs font-semibold">{duration} días naturales</p>
-                                                                </div>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                );
-                                            })}
+                                                    return (
+                                                        <TooltipProvider key={task.id}>
+                                                            <Tooltip delayDuration={100}>
+                                                                <TooltipTrigger asChild>
+                                                                    <div
+                                                                        className="absolute h-6 rounded-md shadow-sm border cursor-pointer transition-all hover:scale-[1.02] flex items-center px-2 overflow-hidden"
+                                                                        style={{
+                                                                            left,
+                                                                            width,
+                                                                            backgroundColor: `${projectColor}dd`,
+                                                                            borderColor: projectColor,
+                                                                            color: '#fff',
+                                                                            textShadow: '0px 1px 2px rgba(0,0,0,0.2)'
+                                                                        }}
+                                                                    >
+                                                                        <span className="text-[9px] font-bold truncate">{duration}d</span>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
+                                                                    <div className="space-y-1">
+                                                                        <p className="font-bold text-sm">{row.name}</p>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            {format(task.startDate, 'dd/MM/yyyy')} - {format(task.endDate, 'dd/MM/yyyy')}
+                                                                        </p>
+                                                                        <p className="text-xs font-semibold">{duration} días naturales</p>
+                                                                    </div>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
 
