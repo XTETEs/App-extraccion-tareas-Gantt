@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { format, addDays, startOfWeek, endOfWeek, eachWeekOfInterval, differenceInDays } from 'date-fns';
+import { format, addMonths, subMonths, startOfWeek, endOfWeek, eachWeekOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AlertTriangle, Calendar, Info, Search, Eye, Printer } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -32,9 +32,16 @@ export function BottleneckRadar() {
         const minDate = new Date(Math.min(...starts));
         const maxDate = new Date(Math.max(...ends));
 
+        // Use a 6-month window as requested by the user
+        // Start 1 month before the earliest task
+        const startRaw = subMonths(minDate, 1);
+        // End is at least 6 months after the startRaw, but also covers the maxDate
+        const sixMonthsAfterStart = addMonths(startRaw, 6);
+        const endRaw = maxDate > sixMonthsAfterStart ? maxDate : sixMonthsAfterStart;
+
         // Pad range to show full weeks
-        const start = startOfWeek(addDays(minDate, -7), { locale: es });
-        const end = endOfWeek(addDays(maxDate, 7), { locale: es });
+        const start = startOfWeek(startRaw, { locale: es });
+        const end = endOfWeek(endRaw, { locale: es });
 
         const weeks = eachWeekOfInterval({ start, end }, { locale: es });
 
@@ -169,7 +176,7 @@ export function BottleneckRadar() {
                                                     <Eye className="h-3.5 w-3.5" />
                                                 </button>
                                             </div>
-                                            <div className="flex-1 relative flex h-12 items-center">
+                                            <div className="flex-1 relative flex h-16 items-center">
                                                 {/* Columns background */}
                                                 <div className="absolute inset-0 flex">
                                                     {timelineRange.weeks.map((_, idx) => (
@@ -179,13 +186,22 @@ export function BottleneckRadar() {
 
                                                 {/* Task Bars */}
                                                 {row.tasks.map((task) => {
-                                                    const totalDaysInTimeline = timelineRange.weeks.length * 7;
-                                                    const startOffset = differenceInDays(task.startDate, timelineRange.start);
-                                                    const duration = differenceInDays(task.endDate, task.startDate) + 1;
+                                                    // Normalize to avoid DST or hour issues
+                                                    const totalTimelineDays = timelineRange.weeks.length * 7;
+
+                                                    // startOffset: distance from timeline start to task start
+                                                    const tStart = new Date(task.startDate.getFullYear(), task.startDate.getMonth(), task.startDate.getDate());
+                                                    const rangeStart = new Date(timelineRange.start.getFullYear(), timelineRange.start.getMonth(), timelineRange.start.getDate());
+                                                    const startOffset = Math.round((tStart.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24));
+
+                                                    // duration: inclusive days
+                                                    const tEnd = new Date(task.endDate.getFullYear(), task.endDate.getMonth(), task.endDate.getDate());
+                                                    const duration = Math.round((tEnd.getTime() - tStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
                                                     const weekNum = format(task.startDate, 'w', { locale: es });
 
-                                                    const left = `${(startOffset / totalDaysInTimeline) * 100}%`;
-                                                    const width = `${(duration / totalDaysInTimeline) * 100}%`;
+                                                    const left = `${(startOffset / totalTimelineDays) * 100}%`;
+                                                    const width = `${(duration / totalTimelineDays) * 100}%`;
 
                                                     const projectColor = stringToColor(row.name);
 
@@ -194,7 +210,7 @@ export function BottleneckRadar() {
                                                             <Tooltip delayDuration={100}>
                                                                 <TooltipTrigger asChild>
                                                                     <div
-                                                                        className="absolute h-6 rounded-md shadow-sm border cursor-pointer transition-all hover:scale-[1.02] flex items-center justify-between px-2 overflow-hidden gap-1"
+                                                                        className="absolute h-9 rounded shadow-sm border cursor-pointer transition-all hover:scale-[1.01] flex items-center justify-between px-2 overflow-hidden gap-1 z-10"
                                                                         style={{
                                                                             left,
                                                                             width,
@@ -204,8 +220,8 @@ export function BottleneckRadar() {
                                                                             textShadow: '0px 1px 2px rgba(0,0,0,0.5)'
                                                                         }}
                                                                     >
-                                                                        <span className="text-[8px] font-black opacity-90 shrink-0">S{weekNum}</span>
-                                                                        <span className="text-[9px] font-bold truncate shrink-0">{duration}d</span>
+                                                                        <span className="text-[10px] font-black opacity-90 shrink-0">S{weekNum}</span>
+                                                                        <span className="text-[10px] font-bold truncate shrink-0">{duration}d</span>
                                                                     </div>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
