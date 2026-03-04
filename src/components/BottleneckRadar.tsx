@@ -179,13 +179,13 @@ export function BottleneckRadar() {
 
                                                 {/* Task Bars */}
                                                 {row.tasks.map((task) => {
-                                                    const totalDays = differenceInDays(timelineRange.end, timelineRange.start);
+                                                    const totalDaysInTimeline = timelineRange.weeks.length * 7;
                                                     const startOffset = differenceInDays(task.startDate, timelineRange.start);
                                                     const duration = differenceInDays(task.endDate, task.startDate) + 1;
                                                     const weekNum = format(task.startDate, 'w', { locale: es });
 
-                                                    const left = `${(startOffset / totalDays) * 100}%`;
-                                                    const width = `${(duration / totalDays) * 100}%`;
+                                                    const left = `${(startOffset / totalDaysInTimeline) * 100}%`;
+                                                    const width = `${(duration / totalDaysInTimeline) * 100}%`;
 
                                                     const projectColor = stringToColor(row.name);
 
@@ -214,6 +214,7 @@ export function BottleneckRadar() {
                                                                         <p className="text-xs text-muted-foreground">
                                                                             {format(task.startDate, 'dd/MM/yyyy')} - {format(task.endDate, 'dd/MM/yyyy')}
                                                                         </p>
+                                                                        <p className="text-xs font-semibold text-primary">Comienzo Tarea: S{weekNum}</p>
                                                                         <p className="text-xs font-semibold">{duration} días naturales</p>
                                                                     </div>
                                                                 </TooltipContent>
