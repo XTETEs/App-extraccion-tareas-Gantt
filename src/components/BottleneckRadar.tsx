@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { format, addDays, startOfWeek, endOfWeek, eachWeekOfInterval, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -6,8 +6,7 @@ import { AlertTriangle, Calendar, Info, Search } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 export function BottleneckRadar() {
-    const { tasks, projects } = useStore();
-    const [selectedTaskName, setSelectedTaskName] = useState<string>('');
+    const { tasks, projects, radarSelectedTask, setRadarSelectedTask } = useStore();
 
     // 1. Extract unique task names for the dropdown
     const uniqueTaskNames = useMemo(() => {
@@ -17,9 +16,9 @@ export function BottleneckRadar() {
 
     // 2. Filter tasks by selected name
     const relevantTasks = useMemo(() => {
-        if (!selectedTaskName) return [];
-        return tasks.filter(t => t.name === selectedTaskName);
-    }, [tasks, selectedTaskName]);
+        if (!radarSelectedTask) return [];
+        return tasks.filter(t => t.name === radarSelectedTask);
+    }, [tasks, radarSelectedTask]);
 
     // 3. Calculate Date Range for the Timeline
     const timelineRange = useMemo(() => {
@@ -42,7 +41,7 @@ export function BottleneckRadar() {
 
     // 4. Group by project for the rows
     const projectRows = useMemo(() => {
-        if (!selectedTaskName) return [];
+        if (!radarSelectedTask) return [];
         const grouped = new Map<string, typeof relevantTasks>();
         relevantTasks.forEach(t => {
             const existing = grouped.get(t.projectName) || [];
@@ -54,7 +53,7 @@ export function BottleneckRadar() {
             tasks: projectTasks,
             order: projects.find(p => p.name === name)?.order ?? 999
         })).sort((a, b) => a.order - b.order);
-    }, [relevantTasks, selectedTaskName, projects]);
+    }, [relevantTasks, radarSelectedTask, projects]);
 
     if (tasks.length === 0) return null;
 
@@ -76,8 +75,8 @@ export function BottleneckRadar() {
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <select
-                            value={selectedTaskName}
-                            onChange={(e) => setSelectedTaskName(e.target.value)}
+                            value={radarSelectedTask}
+                            onChange={(e) => setRadarSelectedTask(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
                         >
                             <option value="">Selecciona una tarea...</option>
@@ -89,7 +88,7 @@ export function BottleneckRadar() {
                 </div>
             </div>
 
-            {selectedTaskName ? (
+            {radarSelectedTask ? (
                 relevantTasks.length > 0 && timelineRange ? (
                     <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col">
                         {/* Timeline Toolbar */}

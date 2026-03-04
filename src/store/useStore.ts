@@ -33,6 +33,8 @@ interface AppState {
     clearData: () => Promise<void>;
     deleteProjects: (projectNames: string[]) => Promise<void>;
     clearRemoteFiles: () => Promise<void>;
+    radarSelectedTask: string;
+    setRadarSelectedTask: (taskName: string) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -44,6 +46,7 @@ export const useStore = create<AppState>((set) => ({
     rawHeaders: [],
     hiddenProjects: [],
     isReportGenerated: false, // Default to false
+    radarSelectedTask: '',
 
     setReportGenerated: (isGenerated) => set({ isReportGenerated: isGenerated }),
 
@@ -270,6 +273,7 @@ export const useStore = create<AppState>((set) => ({
         } catch (error) {
             console.error("Failed to delete projects:", error);
         }
-    }
-}));
+    },
 
+    setRadarSelectedTask: (taskName: string) => set({ radarSelectedTask: taskName }),
+}));
