@@ -182,6 +182,7 @@ export function BottleneckRadar() {
                                                     const totalDays = differenceInDays(timelineRange.end, timelineRange.start);
                                                     const startOffset = differenceInDays(task.startDate, timelineRange.start);
                                                     const duration = differenceInDays(task.endDate, task.startDate) + 1;
+                                                    const weekNum = format(task.startDate, 'w', { locale: es });
 
                                                     const left = `${(startOffset / totalDays) * 100}%`;
                                                     const width = `${(duration / totalDays) * 100}%`;
@@ -193,7 +194,7 @@ export function BottleneckRadar() {
                                                             <Tooltip delayDuration={100}>
                                                                 <TooltipTrigger asChild>
                                                                     <div
-                                                                        className="absolute h-6 rounded-md shadow-sm border cursor-pointer transition-all hover:scale-[1.02] flex items-center px-2 overflow-hidden"
+                                                                        className="absolute h-6 rounded-md shadow-sm border cursor-pointer transition-all hover:scale-[1.02] flex items-center justify-between px-2 overflow-hidden gap-1"
                                                                         style={{
                                                                             left,
                                                                             width,
@@ -203,7 +204,8 @@ export function BottleneckRadar() {
                                                                             textShadow: '0px 1px 2px rgba(0,0,0,0.5)'
                                                                         }}
                                                                     >
-                                                                        <span className="text-[9px] font-bold truncate">{duration}d</span>
+                                                                        <span className="text-[9px] font-bold truncate shrink-0">{duration}d</span>
+                                                                        <span className="text-[8px] font-black opacity-90 shrink-0">S{weekNum}</span>
                                                                     </div>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
