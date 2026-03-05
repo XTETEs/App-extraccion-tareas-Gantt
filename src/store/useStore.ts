@@ -13,7 +13,7 @@ interface AppState {
 
     // Actions
     setTasks: (tasks: Task[]) => void;
-    addTasks: (tasks: Task[], projectDates?: { startDate?: Date, endDate?: Date }) => Promise<void>;
+    addTasks: (tasks: Task[], projectDates?: { startDate?: Date, endDate?: Date, blobUrl?: string }) => Promise<void>;
     setProjects: (projects: Project[]) => void;
     reorderProjects: (projects: Project[]) => Promise<void>;
     setColumnMapping: (mapping: ColumnMapping) => void;
@@ -77,19 +77,17 @@ export const useStore = create<AppState>((set) => ({
         const uniqueProjectNames = Array.from(new Set(newTasks.map(t => t.projectName)));
 
         // 1. Clean up existing tasks for these projects to prevent duplicates (Snapshot logic)
-        // We assume an upload contains the full latest state of a project.
         await db.tasks.where('projectName').anyOf(uniqueProjectNames).delete();
 
         // 2. Add new tasks to DB and State
         await db.tasks.bulkAdd(newTasks);
 
         set((state) => ({
-            // Remove old tasks for these projects and append new ones
             tasks: [
                 ...state.tasks.filter(t => !uniqueProjectNames.includes(t.projectName)),
                 ...newTasks
             ],
-            isReportGenerated: false // Reset report on new data
+            isReportGenerated: false
         }));
 
         // 3. Handle Projects creation/update
@@ -99,7 +97,6 @@ export const useStore = create<AppState>((set) => ({
 
             for (const name of uniqueProjectNames) {
                 if (!existingNames.has(name)) {
-                    // Create New
                     const maxOrder = existingProjects.length > 0
                         ? Math.max(...existingProjects.map(p => p.order || 0))
                         : -1;
@@ -110,7 +107,8 @@ export const useStore = create<AppState>((set) => ({
                         lastUpdated: new Date(),
                         order: maxOrder + 1,
                         startDate: projectDates?.startDate,
-                        endDate: projectDates?.endDate
+                        endDate: projectDates?.endDate,
+                        blobUrl: projectDates?.blobUrl,
                     };
 
                     await db.projects.add(newProjectData as any);
@@ -121,16 +119,18 @@ export const useStore = create<AppState>((set) => ({
                             name: newProjectData.name,
                             order: newProjectData.order,
                             startDate: newProjectData.startDate,
-                            endDate: newProjectData.endDate
+                            endDate: newProjectData.endDate,
+                            blobUrl: newProjectData.blobUrl,
                         }]
                     }));
                 } else {
-                    // Update Existing with new dates if provided
-                    if (projectDates && (projectDates.startDate || projectDates.endDate)) {
-                        const updateData: any = { lastUpdated: new Date() };
-                        if (projectDates.startDate) updateData.startDate = projectDates.startDate;
-                        if (projectDates.endDate) updateData.endDate = projectDates.endDate;
+                    // Update Existing with new dates/blobUrl if provided
+                    const updateData: any = { lastUpdated: new Date() };
+                    if (projectDates?.startDate) updateData.startDate = projectDates.startDate;
+                    if (projectDates?.endDate) updateData.endDate = projectDates.endDate;
+                    if (projectDates?.blobUrl) updateData.blobUrl = projectDates.blobUrl;
 
+                    if (Object.keys(updateData).length > 1) {
                         await db.projects.update(name, updateData);
 
                         set(state => ({
@@ -138,8 +138,9 @@ export const useStore = create<AppState>((set) => ({
                                 p.id === name
                                     ? {
                                         ...p,
-                                        startDate: projectDates.startDate || p.startDate,
-                                        endDate: projectDates.endDate || p.endDate
+                                        startDate: projectDates?.startDate || p.startDate,
+                                        endDate: projectDates?.endDate || p.endDate,
+                                        blobUrl: projectDates?.blobUrl || p.blobUrl,
                                     }
                                     : p
                             )
@@ -206,7 +207,7 @@ export const useStore = create<AppState>((set) => ({
                 } else {
                     // 3. Normal Case: sort by order
                     projects.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-                    set({ tasks, projects: projects.map(p => ({ id: p.name, name: p.name, order: p.order, startDate: p.startDate, endDate: p.endDate })) });
+                    set({ tasks, projects: projects.map(p => ({ id: p.name, name: p.name, order: p.order, startDate: p.startDate, endDate: p.endDate, blobUrl: p.blobUrl })) });
                 }
             }
         } catch (error) {
@@ -249,12 +250,24 @@ export const useStore = create<AppState>((set) => ({
             const state = useStore.getState();
             const isDeletingAll = projectNames.length === state.projects.length;
 
+            // --- Delete remote blob files for each project being deleted ---
+            const projectsToDelete = state.projects.filter(p => projectNames.includes(p.id));
+            await Promise.allSettled(
+                projectsToDelete
+                    .filter(p => p.blobUrl)
+                    .map(p =>
+                        fetch('/api/delete-file', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ url: p.blobUrl }),
+                        }).catch(e => console.warn('[deleteProjects] Remote delete failed:', e))
+                    )
+            );
+
             if (isDeletingAll) {
-                // More efficient and reliable for "delete all"
                 await db.tasks.clear();
                 await db.projects.clear();
             } else {
-                // Delete specific projects from DB
                 await db.tasks.where('projectName').anyOf(projectNames).delete();
                 await db.projects.bulkDelete(projectNames);
             }
@@ -266,7 +279,6 @@ export const useStore = create<AppState>((set) => ({
                     tasks: state.tasks.filter(t => !projectNames.includes(t.projectName)),
                     projects: remainingProjects,
                     hiddenProjects: state.hiddenProjects.filter(id => !projectNames.includes(id)),
-                    // If no projects left, reset the report generation state
                     isReportGenerated: remainingProjects.length > 0 ? state.isReportGenerated : false
                 };
             });

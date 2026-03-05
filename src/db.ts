@@ -9,6 +9,8 @@ interface Project {
     order?: number;
     startDate?: Date;
     endDate?: Date;
+    /** URL of the corresponding Vercel Blob file (used to delete it remotely when the project is deleted) */
+    blobUrl?: string;
 }
 
 // Extend Task to be DB compatible if needed, but the original interface should work
@@ -26,6 +28,10 @@ db.version(1).stores({
 
 db.version(2).stores({
     projects: 'name, lastUpdated, order'
+});
+
+db.version(3).stores({
+    projects: 'name, lastUpdated, order, blobUrl'
 });
 
 export { db };

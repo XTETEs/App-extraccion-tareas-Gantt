@@ -1,11 +1,15 @@
 import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { format, addMonths, subMonths, startOfWeek, endOfWeek, eachWeekOfInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AlertTriangle, Calendar, Info, Search, Eye, Printer } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { stringToColor } from '../lib/utils';
 import { Button } from './ui/button';
+import { buildTimeScale, toUtcDay, getISOWeek } from '../lib/timeScale';
+
+// Fixed pixel width of the project-name left column
+const LEFT_COL_PX = 192;
 
 export function BottleneckRadar() {
     const { tasks, projects, radarSelectedTask, setRadarSelectedTask, hiddenProjects, toggleProjectVisibility } = useStore();
@@ -22,35 +26,8 @@ export function BottleneckRadar() {
         return tasks.filter(t => t.name === radarSelectedTask);
     }, [tasks, radarSelectedTask]);
 
-    // 3. Calculate Date Range for the Timeline
-    const timelineRange = useMemo(() => {
-        if (relevantTasks.length === 0) return null;
-
-        // Helper: strip time → local midnight expressed in UTC for clean arithmetic
-        const toUtcDay = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
-
-        const starts = relevantTasks.map(t => toUtcDay(t.startDate));
-        const ends = relevantTasks.map(t => toUtcDay(t.endDate));
-
-        const minDate = new Date(Math.min(...starts));
-        const maxDate = new Date(Math.max(...ends));
-
-        // Start 1 month before the earliest task, padded to a Monday
-        const startRaw = subMonths(minDate, 1);
-        // End covers at least 3 months from startRaw, but always reaches maxDate
-        const threeMonthsAfterStart = addMonths(startRaw, 3);
-        const endRaw = maxDate > threeMonthsAfterStart ? maxDate : threeMonthsAfterStart;
-
-        // Use weekStartsOn: 1 (Monday) EXPLICITLY — same option passed to both functions
-        // so weeks[0] is guaranteed to equal `start`.
-        const weekOptions = { weekStartsOn: 1 as const };
-        const start = startOfWeek(startRaw, weekOptions);
-        const end = endOfWeek(endRaw, weekOptions);
-
-        const weeks = eachWeekOfInterval({ start, end }, weekOptions);
-
-        return { start, end, weeks, toUtcDay };
-    }, [relevantTasks]);
+    // 3. Build the unified time scale — single source of truth for ALL positions
+    const scale = useMemo(() => buildTimeScale(relevantTasks), [relevantTasks]);
 
     // 4. Group by project for the rows
     const projectRows = useMemo(() => {
@@ -67,7 +44,7 @@ export function BottleneckRadar() {
                 tasks: projectTasks,
                 order: projects.find(p => p.name === name)?.order ?? 999
             }))
-            .filter(row => !hiddenProjects.includes(row.name)) // Hide entirely if in hiddenProjects
+            .filter(row => !hiddenProjects.includes(row.name))
             .sort((a, b) => a.order - b.order);
     }, [relevantTasks, radarSelectedTask, projects, hiddenProjects]);
 
@@ -116,13 +93,18 @@ export function BottleneckRadar() {
             </div>
 
             {radarSelectedTask ? (
-                relevantTasks.length > 0 && timelineRange ? (
+                relevantTasks.length > 0 && scale ? (
                     <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col" id="print-area">
                         {/* Timeline Toolbar */}
                         <div className="p-4 bg-muted/30 border-b border-border/40 flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4" />
-                                <span>Vista Semanal: {format(timelineRange.start, 'dd MMM yyyy')} - {format(timelineRange.end, 'dd MMM yyyy')}</span>
+                                <span>
+                                    Vista Semanal:{' '}
+                                    {format(new Date(scale.startMs), 'dd MMM yyyy', { locale: es })}
+                                    {' '}–{' '}
+                                    {format(new Date(scale.endMs), 'dd MMM yyyy', { locale: es })}
+                                </span>
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-1.5">
@@ -142,112 +124,146 @@ export function BottleneckRadar() {
                             </div>
                         </div>
 
-                        {/* Timeline Grid */}
+                        {/* ── Timeline Grid ──────────────────────────────────────────────────────
+                            ARCHITECTURE:
+                            • The scrollable container holds ONE fixed-width div (LEFT_COL_PX + scale.totalPx).
+                            • Both the week-tick header AND every task row use this same explicit px width.
+                            • Tick marks and bar positions are computed via the SAME formula:
+                                X_px = (T_target - T_start) / T_total × totalPx
+                            • This guarantees mathematical alignment — no flex-min-width drift possible.
+                        ─────────────────────────────────────────────────────────────────────── */}
                         <div className="overflow-x-auto custom-scrollbar">
-                            <div className="min-w-[800px]">
-                                {/* Header: Dates */}
-                                <div className="flex border-b border-border/20">
-                                    <div className="w-32 md:w-48 shrink-0 p-3 bg-muted/10 border-r border-border/40 font-bold text-[10px] uppercase">Obra</div>
-                                    <div className="flex-1 flex">
-                                        {timelineRange.weeks.map((week, idx) => (
-                                            <div key={idx} className="flex-1 min-w-[60px] p-2 text-center border-r border-border/10 text-[9px] text-muted-foreground font-medium">
-                                                <div className="font-bold">{format(week, 'dd MMM', { locale: es })}</div>
-                                                <div className="opacity-60">{format(week, 'yyyy')}</div>
-                                            </div>
-                                        ))}
+                            <div style={{ width: LEFT_COL_PX + scale.totalPx }}>
+
+                                {/* ── Date Header ── */}
+                                <div className="flex border-b border-border/20 bg-muted/5">
+                                    {/* Name column */}
+                                    <div
+                                        className="shrink-0 p-3 bg-muted/10 border-r border-border/40 font-bold text-[10px] uppercase flex items-end"
+                                        style={{ width: LEFT_COL_PX }}
+                                    >
+                                        Obra
+                                    </div>
+
+                                    {/* Tick area — same explicit width as bar areas below */}
+                                    <div
+                                        className="relative"
+                                        style={{ width: scale.totalPx, height: 44 }}
+                                    >
+                                        {scale.weekTicks.map(tick => {
+                                            const x = scale.toPx(tick.ms);
+                                            return (
+                                                <div
+                                                    key={tick.ms}
+                                                    className="absolute top-0 h-full flex flex-col justify-end pb-1 select-none"
+                                                    style={{ left: x, width: 68 }}
+                                                >
+                                                    {/* Vertical separator */}
+                                                    <div className="absolute top-0 bottom-0 left-0 border-l border-border/20" />
+                                                    <div className="pl-1 text-[9px] text-muted-foreground font-bold leading-tight">{tick.label}</div>
+                                                    <div className="pl-1 text-[8px] text-muted-foreground opacity-50 leading-tight">{tick.year}</div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
-                                {/* Rows: Projects */}
-                                {projectRows.map((row) => {
-                                    return (
-                                        <div key={row.name} className="flex border-b border-border/10 group hover:bg-muted/10 transition-colors">
-                                            <div
-                                                className="w-32 md:w-48 shrink-0 p-3 border-r border-border/40 flex items-center justify-between gap-1 overflow-hidden transition-colors"
-                                                style={{
-                                                    backgroundColor: `${stringToColor(row.name)}15`,
-                                                    borderLeft: `4px solid ${stringToColor(row.name)}`
-                                                }}
+                                {/* ── Project Rows ── */}
+                                {projectRows.map((row) => (
+                                    <div key={row.name} className="flex border-b border-border/10 group hover:bg-muted/10 transition-colors">
+                                        {/* Name column */}
+                                        <div
+                                            className="shrink-0 p-3 border-r border-border/40 flex items-center justify-between gap-1 overflow-hidden transition-colors"
+                                            style={{
+                                                width: LEFT_COL_PX,
+                                                backgroundColor: `${stringToColor(row.name)}15`,
+                                                borderLeft: `4px solid ${stringToColor(row.name)}`
+                                            }}
+                                        >
+                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                <div className="h-2.5 w-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: stringToColor(row.name) }} />
+                                                <span className="text-xs font-bold truncate" title={row.name}>{row.name}</span>
+                                            </div>
+                                            <button
+                                                onClick={() => toggleProjectVisibility(row.name)}
+                                                className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-foreground shrink-0"
+                                                title="Ocultar obra"
                                             >
-                                                <div className="flex items-center gap-2 overflow-hidden">
-                                                    <div className="h-2.5 w-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: stringToColor(row.name) }} />
-                                                    <span className="text-xs font-bold truncate" title={row.name}>{row.name}</span>
-                                                </div>
-                                                <button
-                                                    onClick={() => toggleProjectVisibility(row.name)}
-                                                    className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-foreground shrink-0"
-                                                    title="Ocultar obra"
-                                                >
-                                                    <Eye className="h-3.5 w-3.5" />
-                                                </button>
-                                            </div>
-                                            <div className="flex-1 relative flex h-16 items-center">
-                                                {/* Columns background */}
-                                                <div className="absolute inset-0 flex">
-                                                    {timelineRange.weeks.map((_, idx) => (
-                                                        <div key={idx} className="flex-1 border-r border-border/5" />
-                                                    ))}
-                                                </div>
-
-                                                {/* Task Bars */}
-                                                {row.tasks.map((task) => {
-                                                    // Compute position using LOCAL date components via Date.UTC arithmetic
-                                                    // Avoids all DST / timezone-offset errors in subtraction.
-                                                    const MS_PER_DAY = 86_400_000;
-                                                    const totalTimelineDays = timelineRange.weeks.length * 7;
-                                                    const rangeStartUtc = timelineRange.toUtcDay(timelineRange.start);
-
-                                                    const startOffset = Math.round(
-                                                        (timelineRange.toUtcDay(task.startDate) - rangeStartUtc) / MS_PER_DAY
-                                                    );
-                                                    const duration = Math.round(
-                                                        (timelineRange.toUtcDay(task.endDate) - timelineRange.toUtcDay(task.startDate)) / MS_PER_DAY
-                                                    ) + 1;
-
-                                                    const weekNum = format(task.startDate, 'w', { weekStartsOn: 1 });
-
-                                                    const left = `${Math.max(0, (startOffset / totalTimelineDays) * 100)}%`;
-                                                    const width = `${Math.max(1, Math.min(100 - (startOffset / totalTimelineDays) * 100, (duration / totalTimelineDays) * 100))}%`;
-
-                                                    const projectColor = stringToColor(row.name);
-
-                                                    return (
-                                                        <TooltipProvider key={task.id}>
-                                                            <Tooltip delayDuration={100}>
-                                                                <TooltipTrigger asChild>
-                                                                    <div
-                                                                        className="absolute h-9 rounded shadow-sm border cursor-pointer transition-all hover:scale-[1.01] flex items-center justify-between px-2 overflow-hidden gap-1 z-10"
-                                                                        style={{
-                                                                            left,
-                                                                            width,
-                                                                            backgroundColor: projectColor,
-                                                                            borderColor: projectColor,
-                                                                            color: '#fff',
-                                                                            textShadow: '0px 1px 2px rgba(0,0,0,0.5)'
-                                                                        }}
-                                                                    >
-                                                                        <span className="text-[10px] font-black opacity-90 shrink-0">S{weekNum}</span>
-                                                                        <span className="text-[10px] font-bold truncate shrink-0">{duration}d</span>
-                                                                    </div>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
-                                                                    <div className="space-y-1">
-                                                                        <p className="font-bold text-sm">{row.name}</p>
-                                                                        <p className="text-xs text-muted-foreground">
-                                                                            {format(task.startDate, 'dd/MM/yyyy')} - {format(task.endDate, 'dd/MM/yyyy')}
-                                                                        </p>
-                                                                        <p className="text-xs font-semibold text-primary">Comienzo Tarea: S{weekNum}</p>
-                                                                        <p className="text-xs font-semibold">{duration} días naturales</p>
-                                                                    </div>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                    );
-                                                })}
-                                            </div>
+                                                <Eye className="h-3.5 w-3.5" />
+                                            </button>
                                         </div>
-                                    );
-                                })}
+
+                                        {/* Bar area — exact same width as tick area in header */}
+                                        <div
+                                            className="relative"
+                                            style={{ width: scale.totalPx, height: 64 }}
+                                        >
+                                            {/* Vertical grid lines — SAME toPx() as header ticks */}
+                                            {scale.weekTicks.map(tick => (
+                                                <div
+                                                    key={tick.ms}
+                                                    className="absolute top-0 bottom-0 border-l border-border/5"
+                                                    style={{ left: scale.toPx(tick.ms) }}
+                                                />
+                                            ))}
+
+                                            {/* Task bars
+                                                X_px = toPx(taskStartMs)
+                                                W_px = toPx(taskEndMs + MS_DAY) – X_px  (inclusive of end day)
+                                            */}
+                                            {row.tasks.map((task) => {
+                                                const taskStartMs = toUtcDay(task.startDate);
+                                                const taskEndMs = toUtcDay(task.endDate);
+                                                const MS_DAY = 86_400_000;
+
+                                                const leftPx = scale.toPx(taskStartMs);
+                                                // Width represents inclusive duration (end day counts fully)
+                                                const widthPx = scale.toPx(taskEndMs + MS_DAY) - leftPx;
+
+                                                // Clamp to visible area
+                                                const clampedLeft = Math.max(0, leftPx);
+                                                const clampedWidth = Math.max(2, Math.min(scale.totalPx - clampedLeft, widthPx));
+
+                                                const isoWeek = getISOWeek(task.startDate);
+                                                const durationDays = Math.round((taskEndMs - taskStartMs) / MS_DAY) + 1;
+                                                const projectColor = stringToColor(row.name);
+
+                                                return (
+                                                    <TooltipProvider key={task.id}>
+                                                        <Tooltip delayDuration={100}>
+                                                            <TooltipTrigger asChild>
+                                                                <div
+                                                                    className="absolute top-1/2 -translate-y-1/2 h-9 rounded shadow-sm border cursor-pointer transition-all hover:scale-y-105 flex items-center justify-between px-2 overflow-hidden gap-1 z-10"
+                                                                    style={{
+                                                                        left: clampedLeft,
+                                                                        width: clampedWidth,
+                                                                        backgroundColor: projectColor,
+                                                                        borderColor: projectColor,
+                                                                        color: '#fff',
+                                                                        textShadow: '0px 1px 2px rgba(0,0,0,0.5)'
+                                                                    }}
+                                                                >
+                                                                    <span className="text-[10px] font-black opacity-90 shrink-0">S{isoWeek}</span>
+                                                                    <span className="text-[10px] font-bold truncate shrink-0">{durationDays}d</span>
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
+                                                                <div className="space-y-1">
+                                                                    <p className="font-bold text-sm">{row.name}</p>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        {format(task.startDate, 'dd/MM/yyyy')} – {format(task.endDate, 'dd/MM/yyyy')}
+                                                                    </p>
+                                                                    <p className="text-xs font-semibold text-primary">Semana inicio: S{isoWeek}</p>
+                                                                    <p className="text-xs font-semibold text-orange-500">{durationDays} días naturales</p>
+                                                                </div>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 

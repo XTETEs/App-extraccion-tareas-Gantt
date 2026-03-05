@@ -22,6 +22,8 @@ export interface Project {
     order?: number;
     startDate?: Date;
     endDate?: Date;
+    /** URL of the corresponding Vercel Blob file */
+    blobUrl?: string;
 }
 
 export interface ColumnMapping {

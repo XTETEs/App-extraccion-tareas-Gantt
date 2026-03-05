@@ -85,7 +85,7 @@ export function FileUpload() {
 
                             const file = new File([blob], filename, { type: blob.type });
                             console.log(`[FileUpload] Procesando archivo: ${filename}`);
-                            const loaded = processFile(file);
+                            const loaded = processFile(file, url); // pass blobUrl for remote tracking
                             if (loaded) successCount++;
                         } catch (err) {
                             console.error(`Failed to load remote file ${url}:`, err);
@@ -115,7 +115,7 @@ export function FileUpload() {
         loadRemoteFiles();
     }, []); // Run once on mount
 
-    const processFile = (file: File) => {
+    const processFile = (file: File, blobUrl?: string) => {
         // If we don't have a mapping yet, queue it.
         // CHECK: If we already have pending files, we just add to them?
         // Actually, we need to check columnMapping inside the function or before calling it.
@@ -339,7 +339,7 @@ export function FileUpload() {
                 }
             });
 
-            addTasks(parsedTasks, { startDate: projectStartDate, endDate: projectEndDate });
+            addTasks(parsedTasks, { startDate: projectStartDate, endDate: projectEndDate, blobUrl });
             return true;
         };
         reader.readAsArrayBuffer(file);
