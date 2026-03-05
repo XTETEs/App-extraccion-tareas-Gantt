@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { format, addMonths, subMonths, startOfWeek, endOfWeek, eachWeekOfInterval } from 'date-fns';
+import { format, addMonths, subMonths, startOfWeek, endOfWeek, eachWeekOfInterval, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AlertTriangle, Calendar, Info, Search, Eye, Printer } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -147,7 +147,8 @@ export function BottleneckRadar() {
                                     <div className="flex-1 flex">
                                         {timelineRange.weeks.map((week, idx) => (
                                             <div key={idx} className="flex-1 min-w-[60px] p-2 text-center border-r border-border/10 text-[9px] text-muted-foreground font-medium">
-                                                {format(week, 'dd MMM', { locale: es })}
+                                                <div className="font-bold">{format(week, 'dd MMM', { locale: es })}</div>
+                                                <div className="opacity-60">{format(week, 'yyyy')}</div>
                                             </div>
                                         ))}
                                     </div>
@@ -190,18 +191,16 @@ export function BottleneckRadar() {
                                                     const totalTimelineDays = timelineRange.weeks.length * 7;
 
                                                     // startOffset: distance from timeline start to task start
-                                                    const tStart = new Date(task.startDate.getFullYear(), task.startDate.getMonth(), task.startDate.getDate());
-                                                    const rangeStart = new Date(timelineRange.start.getFullYear(), timelineRange.start.getMonth(), timelineRange.start.getDate());
-                                                    const startOffset = Math.round((tStart.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24));
+                                                    const startOffset = differenceInCalendarDays(task.startDate, timelineRange.start);
 
                                                     // duration: inclusive days
-                                                    const tEnd = new Date(task.endDate.getFullYear(), task.endDate.getMonth(), task.endDate.getDate());
-                                                    const duration = Math.round((tEnd.getTime() - tStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                                                    const duration = differenceInCalendarDays(task.endDate, task.startDate) + 1;
 
                                                     const weekNum = format(task.startDate, 'w', { locale: es });
 
-                                                    const left = `${(startOffset / totalTimelineDays) * 100}%`;
-                                                    const width = `${(duration / totalTimelineDays) * 100}%`;
+                                                    // Calculate position relative to total span
+                                                    const left = `${Math.max(0, (startOffset / totalTimelineDays) * 100)}%`;
+                                                    const width = `${Math.min(100, (duration / totalTimelineDays) * 100)}%`;
 
                                                     const projectColor = stringToColor(row.name);
 

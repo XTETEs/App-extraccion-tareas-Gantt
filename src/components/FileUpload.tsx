@@ -265,8 +265,12 @@ export function FileUpload() {
             jsonDataObjects.forEach((row: any) => {
                 const projectName = sheetName;
                 const taskName = row[columnMapping.taskCol];
-                const startDate = new Date(row[columnMapping.startCol]);
-                const endDate = new Date(row[columnMapping.endCol]);
+                const startDate = parseFlexibleDate(row[columnMapping.startCol]);
+                const endDate = parseFlexibleDate(row[columnMapping.endCol]);
+
+                if (!startDate || !endDate) {
+                    return;
+                }
 
                 if (projectName && taskName) {
                     const normalizeString = (str: string) =>
