@@ -58,7 +58,14 @@ export function FileUpload() {
                 console.log('[FileUpload] Respuesta recibida:', res.status, res.statusText);
                 if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
 
-                const data = await res.json();
+                const text = await res.text();
+                if (text.trim().startsWith('import') || text.trim().startsWith('export')) {
+                    console.error('[FileUpload] API list-gantt ha devuelto código fuente en lugar de JSON. ¿Está usando vercel dev?');
+                    setSyncStatus('error');
+                    setSyncMessage('Error de API: Servidor no configurado correctamente');
+                    return;
+                }
+                const data = JSON.parse(text);
                 console.log('[FileUpload] Datos recibidos:', data);
 
                 if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {

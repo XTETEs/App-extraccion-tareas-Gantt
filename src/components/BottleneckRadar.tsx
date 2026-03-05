@@ -134,11 +134,11 @@ export function BottleneckRadar() {
                         ─────────────────────────────────────────────────────────────────────── */}
                         <div className="overflow-x-auto custom-scrollbar">
                             <div style={{ width: LEFT_COL_PX + scale.totalPx }} className="relative">
-                                <div className="absolute top-0 bottom-0 pointer-events-none z-0" style={{ left: LEFT_COL_PX, width: scale.totalPx }}>
+                                <div className="absolute top-0 bottom-0 pointer-events-none z-[5]" style={{ left: LEFT_COL_PX, width: scale.totalPx }}>
                                     {Array.from(new Set(relevantTasks.map(t => toUtcDay(t.startDate)))).map(startMs => (
                                         <div
                                             key={startMs}
-                                            className="absolute top-0 bottom-0 border-l border-primary/30"
+                                            className="absolute top-0 bottom-0 border-l border-primary/20 shadow-[0_0_1px_rgba(255,255,255,0.3)]"
                                             style={{ left: scale.toPx(startMs) }}
                                         />
                                     ))}

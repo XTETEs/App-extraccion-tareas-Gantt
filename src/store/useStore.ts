@@ -260,7 +260,14 @@ export const useStore = create<AppState>((set) => ({
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ url: p.blobUrl }),
-                        }).catch(e => console.warn('[deleteProjects] Remote delete failed:', e))
+                        }).then(async res => {
+                            if (!res.ok) throw new Error(`Server returned ${res.status}`);
+                            const text = await res.text();
+                            if (text.trim().startsWith('import')) throw new Error('API returned JS source code instead of executing. (Run vercel dev)');
+                            return JSON.parse(text);
+                        }).catch(e => {
+                            console.error(`[deleteProjects] Error eliminando archivo remoto de "${p.name}":`, e);
+                        })
                     )
             );
 
