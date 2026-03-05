@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { format, addMonths, subMonths, startOfWeek, endOfWeek, eachWeekOfInterval, differenceInCalendarDays } from 'date-fns';
+import { format, addMonths, subMonths, startOfWeek, endOfWeek, eachWeekOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AlertTriangle, Calendar, Info, Search, Eye, Printer } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -26,26 +26,30 @@ export function BottleneckRadar() {
     const timelineRange = useMemo(() => {
         if (relevantTasks.length === 0) return null;
 
-        const starts = relevantTasks.map(t => t.startDate.getTime());
-        const ends = relevantTasks.map(t => t.endDate.getTime());
+        // Helper: strip time → local midnight expressed in UTC for clean arithmetic
+        const toUtcDay = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+
+        const starts = relevantTasks.map(t => toUtcDay(t.startDate));
+        const ends = relevantTasks.map(t => toUtcDay(t.endDate));
 
         const minDate = new Date(Math.min(...starts));
         const maxDate = new Date(Math.max(...ends));
 
-        // Use a 3-month window as requested by the user
-        // Start 1 month before the earliest task
+        // Start 1 month before the earliest task, padded to a Monday
         const startRaw = subMonths(minDate, 1);
-        // End is at least 3 months after the startRaw, but also covers the maxDate
+        // End covers at least 3 months from startRaw, but always reaches maxDate
         const threeMonthsAfterStart = addMonths(startRaw, 3);
         const endRaw = maxDate > threeMonthsAfterStart ? maxDate : threeMonthsAfterStart;
 
-        // Pad range to show full weeks
-        const start = startOfWeek(startRaw, { locale: es });
-        const end = endOfWeek(endRaw, { locale: es });
+        // Use weekStartsOn: 1 (Monday) EXPLICITLY — same option passed to both functions
+        // so weeks[0] is guaranteed to equal `start`.
+        const weekOptions = { weekStartsOn: 1 as const };
+        const start = startOfWeek(startRaw, weekOptions);
+        const end = endOfWeek(endRaw, weekOptions);
 
-        const weeks = eachWeekOfInterval({ start, end }, { locale: es });
+        const weeks = eachWeekOfInterval({ start, end }, weekOptions);
 
-        return { start, end, weeks };
+        return { start, end, weeks, toUtcDay };
     }, [relevantTasks]);
 
     // 4. Group by project for the rows
@@ -187,20 +191,23 @@ export function BottleneckRadar() {
 
                                                 {/* Task Bars */}
                                                 {row.tasks.map((task) => {
-                                                    // Normalize to avoid DST or hour issues
+                                                    // Compute position using LOCAL date components via Date.UTC arithmetic
+                                                    // Avoids all DST / timezone-offset errors in subtraction.
+                                                    const MS_PER_DAY = 86_400_000;
                                                     const totalTimelineDays = timelineRange.weeks.length * 7;
+                                                    const rangeStartUtc = timelineRange.toUtcDay(timelineRange.start);
 
-                                                    // startOffset: distance from timeline start to task start
-                                                    const startOffset = differenceInCalendarDays(task.startDate, timelineRange.start);
+                                                    const startOffset = Math.round(
+                                                        (timelineRange.toUtcDay(task.startDate) - rangeStartUtc) / MS_PER_DAY
+                                                    );
+                                                    const duration = Math.round(
+                                                        (timelineRange.toUtcDay(task.endDate) - timelineRange.toUtcDay(task.startDate)) / MS_PER_DAY
+                                                    ) + 1;
 
-                                                    // duration: inclusive days
-                                                    const duration = differenceInCalendarDays(task.endDate, task.startDate) + 1;
+                                                    const weekNum = format(task.startDate, 'w', { weekStartsOn: 1 });
 
-                                                    const weekNum = format(task.startDate, 'w', { locale: es });
-
-                                                    // Calculate position relative to total span
                                                     const left = `${Math.max(0, (startOffset / totalTimelineDays) * 100)}%`;
-                                                    const width = `${Math.min(100, (duration / totalTimelineDays) * 100)}%`;
+                                                    const width = `${Math.max(1, Math.min(100 - (startOffset / totalTimelineDays) * 100, (duration / totalTimelineDays) * 100))}%`;
 
                                                     const projectColor = stringToColor(row.name);
 
