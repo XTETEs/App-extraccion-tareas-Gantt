@@ -133,7 +133,16 @@ export function BottleneckRadar() {
                             • This guarantees mathematical alignment — no flex-min-width drift possible.
                         ─────────────────────────────────────────────────────────────────────── */}
                         <div className="overflow-x-auto custom-scrollbar">
-                            <div style={{ width: LEFT_COL_PX + scale.totalPx }}>
+                            <div style={{ width: LEFT_COL_PX + scale.totalPx }} className="relative">
+                                <div className="absolute top-0 bottom-0 pointer-events-none z-0" style={{ left: LEFT_COL_PX, width: scale.totalPx }}>
+                                    {Array.from(new Set(relevantTasks.map(t => toUtcDay(t.startDate)))).map(startMs => (
+                                        <div
+                                            key={startMs}
+                                            className="absolute top-0 bottom-0 border-l border-primary/30"
+                                            style={{ left: scale.toPx(startMs) }}
+                                        />
+                                    ))}
+                                </div>
 
                                 {/* ── Date Header ── */}
                                 <div className="flex border-b border-border/20 bg-muted/5">
