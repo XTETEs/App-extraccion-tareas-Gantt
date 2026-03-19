@@ -5,3 +5,4 @@ export * from './Sidebar';
 export * from './BottleneckRadar';
 export * from './AnalysisView';
 export * from './ProjectManagerModal';
+export * from './PortfolioHealth';
