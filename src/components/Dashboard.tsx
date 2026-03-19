@@ -151,10 +151,10 @@ export function Dashboard() {
                     </div>
                 </div>
 
-                {isReportGenerated ? (
-                    viewMode === 'portfolio' ? (
-                        <PortfolioHealth />
-                    ) : viewMode === 'analysis' ? (
+                {viewMode === 'portfolio' ? (
+                    <PortfolioHealth />
+                ) : isReportGenerated ? (
+                    viewMode === 'analysis' ? (
                         <AnalysisView />
                     ) : viewMode === 'radar' ? (
                         <BottleneckRadar />

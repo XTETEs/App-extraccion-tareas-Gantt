@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getLeafTasks, stringToColor, cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -14,10 +14,109 @@ type ProjectHealth = {
     delayedCount: number;
     criticalDelayedCount: number;
     delayedPercent: number;
+    delayedTasks: any[];
     status: 'healthy' | 'warning' | 'critical';
     color: string;
     [key: string]: any;
 };
+
+const statusConfig = {
+    healthy: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-700', icon: CheckCircle2, label: 'Saludable', color: '#10b981' },
+    warning: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-700', icon: Clock, label: 'Precaución', color: '#f59e0b' },
+    critical: { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-700', icon: AlertCircle, label: 'Crítico', color: '#ef4444' }
+};
+
+function ProjectCard({ project }: { project: ProjectHealth }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const Config = statusConfig[project.status as keyof typeof statusConfig];
+    const Icon = Config.icon;
+
+    return (
+        <div className={cn("relative overflow-hidden rounded-2xl border p-6 transition-all hover:shadow-md", Config.bg, Config.border)}>
+            <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: Config.color }} />
+            
+            <div className="flex justify-between items-start mb-4">
+                <h3 className="font-bold text-lg leading-tight uppercase tracking-tight text-foreground line-clamp-2 pr-4">
+                    {project.name}
+                </h3>
+                <div className={cn("flex px-2 py-1 rounded-full text-xs font-bold items-center gap-1.5 shrink-0 bg-background/50 backdrop-blur-sm border shadow-sm", Config.text, Config.border)}>
+                    <Icon className="h-3.5 w-3.5" />
+                    {Config.label}
+                </div>
+            </div>
+
+            <div className="text-xs text-muted-foreground font-mono bg-background/50 px-3 py-2 rounded-lg border border-border/40 inline-block mb-5">
+                {format(project.startDate, 'dd MMM yyyy', { locale: es })} - {format(project.endDate, 'dd MMM yyyy', { locale: es })}
+            </div>
+
+            <div className="space-y-4">
+                <div>
+                    <div className="flex justify-between text-sm mb-1.5">
+                        <span className="text-muted-foreground font-medium">Tareas con Retraso</span>
+                        <span className="font-bold">{project.delayedCount} <span className="text-muted-foreground font-normal">/ {project.totalTasks}</span></span>
+                    </div>
+                    <div className="h-2 w-full bg-background/60 rounded-full overflow-hidden">
+                        <div 
+                            className={cn("h-full rounded-full transition-all duration-1000", 
+                                project.delayedPercent > 10 ? 'bg-red-500' : project.delayedPercent > 0 ? 'bg-amber-500' : 'bg-emerald-500'
+                            )} 
+                            style={{ width: `${Math.min(100, Math.max(project.delayedPercent || 0, 2))}%` }} 
+                        />
+                    </div>
+                </div>
+
+                {project.criticalDelayedCount > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-red-600 font-semibold bg-red-500/10 px-3 py-2 rounded-lg">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        <span>{project.criticalDelayedCount} Tareas críticas penalizadas</span>
+                    </div>
+                )}
+                
+                {project.criticalDelayedCount === 0 && project.status !== 'healthy' && (
+                    <div className="flex items-center gap-2 text-sm text-amber-700 font-medium bg-amber-500/10 px-3 py-2 rounded-lg">
+                        <Clock className="h-4 w-4 shrink-0" />
+                        <span>Retrasos focalizados en tareas no críticas</span>
+                    </div>
+                )}
+
+                {project.status === 'healthy' && (
+                    <div className="flex items-center gap-2 text-sm text-emerald-700 font-medium bg-emerald-500/10 px-3 py-2 rounded-lg">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        <span>Ejecución conforme a lo planificado</span>
+                    </div>
+                )}
+
+                {/* Expandable Delayed Tasks List */}
+                {project.delayedTasks && project.delayedTasks.length > 0 && (
+                    <div className="mt-4 border-t pt-4 border-border/40">
+                        <button 
+                            type="button"
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="w-full text-left cursor-pointer text-sm font-semibold text-muted-foreground flex items-center justify-between gap-2 hover:text-foreground transition-colors outline-none"
+                        >
+                            <span>{isExpanded ? "▼ Ocultar tareas retrasadas" : "▶ Ver tareas retrasadas"}</span>
+                        </button>
+                        
+                        {isExpanded && (
+                            <div className="mt-3 space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2 animate-in fade-in slide-in-from-top-2">
+                                {project.delayedTasks.map((t: any) => (
+                                    <div key={t.id} className="flex items-start justify-between gap-3 text-xs bg-background/50 p-2.5 rounded-lg border border-border/40 shadow-sm transition-hover hover:bg-muted/50">
+                                        <span className={cn("font-medium line-clamp-2", t.isCritical && "text-red-600 font-bold")}>
+                                            {t.name}
+                                        </span>
+                                        <span className="shrink-0 font-mono text-red-600 font-bold bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/20">
+                                            +{Math.round(t.delayDays!)}d
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 export function PortfolioHealth() {
     const { tasks, projects } = useStore();
@@ -32,14 +131,24 @@ export function PortfolioHealth() {
 
             let delayedCount = 0;
             let criticalDelayedCount = 0;
+            const delayedTasks: any[] = [];
 
             projectTasks.forEach(task => {
                 if ((task.delayDays || 0) > 0) {
                     delayedCount++;
+                    delayedTasks.push(task);
                     if (task.isCritical) {
                         criticalDelayedCount++;
                     }
                 }
+            });
+
+            // Sort delayed tasks by delay magnitude (highest first) and criticality
+            delayedTasks.sort((a, b) => {
+                if (a.isCritical !== b.isCritical) {
+                    return a.isCritical ? -1 : 1;
+                }
+                return (b.delayDays || 0) - (a.delayDays || 0);
             });
 
             const delayedPercent = (delayedCount / totalTasks) * 100;
@@ -67,6 +176,7 @@ export function PortfolioHealth() {
                 delayedCount,
                 criticalDelayedCount,
                 delayedPercent,
+                delayedTasks,
                 status,
                 color: stringToColor(project.name),
             };
@@ -91,12 +201,6 @@ export function PortfolioHealth() {
         }
         return a.name.localeCompare(b.name);
     });
-
-    const statusConfig = {
-        healthy: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-700', icon: CheckCircle2, label: 'Saludable', color: '#10b981' },
-        warning: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-700', icon: Clock, label: 'Precaución', color: '#f59e0b' },
-        critical: { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-700', icon: AlertCircle, label: 'Crítico', color: '#ef4444' }
-    };
 
     return (
         <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -127,68 +231,9 @@ export function PortfolioHealth() {
 
             {/* Grid of Projects */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedHealthData.map(project => {
-                    const Config = statusConfig[project.status as keyof typeof statusConfig];
-                    const Icon = Config.icon;
-
-                    return (
-                        <div key={project.id || project.name} className={cn("relative overflow-hidden rounded-2xl border p-6 transition-all hover:shadow-md", Config.bg, Config.border)}>
-                            <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: Config.color }} />
-                            
-                            <div className="flex justify-between items-start mb-4">
-                                <h3 className="font-bold text-lg leading-tight uppercase tracking-tight text-foreground line-clamp-2 pr-4">
-                                    {project.name}
-                                </h3>
-                                <div className={cn("flex px-2 py-1 rounded-full text-xs font-bold items-center gap-1.5 shrink-0 bg-background/50 backdrop-blur-sm border shadow-sm", Config.text, Config.border)}>
-                                    <Icon className="h-3.5 w-3.5" />
-                                    {Config.label}
-                                </div>
-                            </div>
-
-                            <div className="text-xs text-muted-foreground font-mono bg-background/50 px-3 py-2 rounded-lg border border-border/40 inline-block mb-5">
-                                {format(project.startDate, 'dd MMM yyyy', { locale: es })} - {format(project.endDate, 'dd MMM yyyy', { locale: es })}
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <div className="flex justify-between text-sm mb-1.5">
-                                        <span className="text-muted-foreground font-medium">Tareas con Retraso</span>
-                                        <span className="font-bold">{project.delayedCount} <span className="text-muted-foreground font-normal">/ {project.totalTasks}</span></span>
-                                    </div>
-                                    <div className="h-2 w-full bg-background/60 rounded-full overflow-hidden">
-                                        <div 
-                                            className={cn("h-full rounded-full transition-all duration-1000", 
-                                                project.delayedPercent > 10 ? 'bg-red-500' : project.delayedPercent > 0 ? 'bg-amber-500' : 'bg-emerald-500'
-                                            )} 
-                                            style={{ width: `${Math.min(100, Math.max(project.delayedPercent || 0, 2))}%` }} 
-                                        />
-                                    </div>
-                                </div>
-
-                                {project.criticalDelayedCount > 0 && (
-                                    <div className="flex items-center gap-2 text-sm text-red-600 font-semibold bg-red-500/10 px-3 py-2 rounded-lg">
-                                        <AlertCircle className="h-4 w-4 shrink-0" />
-                                        <span>{project.criticalDelayedCount} Tareas críticas penalizadas</span>
-                                    </div>
-                                )}
-                                
-                                {project.criticalDelayedCount === 0 && project.status !== 'healthy' && (
-                                    <div className="flex items-center gap-2 text-sm text-amber-700 font-medium bg-amber-500/10 px-3 py-2 rounded-lg">
-                                        <Clock className="h-4 w-4 shrink-0" />
-                                        <span>Retrasos focalizados en tareas no críticas</span>
-                                    </div>
-                                )}
-
-                                {project.status === 'healthy' && (
-                                    <div className="flex items-center gap-2 text-sm text-emerald-700 font-medium bg-emerald-500/10 px-3 py-2 rounded-lg">
-                                        <CheckCircle2 className="h-4 w-4 shrink-0" />
-                                        <span>Ejecución conforme a lo planificado</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })}
+                {sortedHealthData.map(project => (
+                    <ProjectCard key={project.id || project.name} project={project} />
+                ))}
             </div>
         </div>
     );
