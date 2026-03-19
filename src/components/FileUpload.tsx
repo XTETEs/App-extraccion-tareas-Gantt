@@ -307,6 +307,23 @@ export function FileUpload() {
                     const slack = columnMapping.slackCol ? parseFloat(row[columnMapping.slackCol]) : undefined;
                     const isMilestone = columnMapping.milestoneCol ? !!row[columnMapping.milestoneCol] : false;
 
+                    // Auto-detect progress column by common header names
+                    let progress: number | undefined = undefined;
+                    const progressKeywords = ['% completado', '% avance', '% complete', 'avance', 'progreso', 'completado', 'complete', '% trabajo'];
+                    for (const header of headers) {
+                        const lh = header.toLowerCase().trim();
+                        if (progressKeywords.some(k => lh.includes(k))) {
+                            const raw = row[header];
+                            if (raw !== undefined && raw !== null) {
+                                let val = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(',', '.'));
+                                // Some tools export as 0-1 fraction instead of 0-100
+                                if (!isNaN(val) && val <= 1) val = val * 100;
+                                if (!isNaN(val)) progress = Math.round(val);
+                            }
+                            break;
+                        }
+                    }
+
                     let budget: number | undefined = undefined;
                     if (columnMapping.budgetCol && row[columnMapping.budgetCol]) {
                         const val = row[columnMapping.budgetCol];
@@ -322,7 +339,9 @@ export function FileUpload() {
                     }
 
                     const today = new Date();
-                    const delayDays = differenceInCalendarDays(today, validEndDate);
+                    // A completed task (100%) is never delayed, even if past due date
+                    const rawDelay = differenceInCalendarDays(today, validEndDate);
+                    const delayDays = (progress !== undefined && progress >= 100) ? 0 : rawDelay;
 
                     const isCritical = (columnMapping.criticalCol && !!row[columnMapping.criticalCol]) ||
                         (slack !== undefined && slack <= 0) ||
@@ -341,7 +360,8 @@ export function FileUpload() {
                         delayDays: delayDays,
                         totalSlack: slack,
                         isMilestone: isMilestone,
-                        budget: budget
+                        budget: budget,
+                        progress: progress
                     });
                 }
             });
