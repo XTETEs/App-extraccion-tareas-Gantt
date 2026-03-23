@@ -12,18 +12,26 @@ import { buildTimeScale, toUtcDay, getISOWeek } from '../lib/timeScale';
 const LEFT_COL_PX = 192;
 
 export function BottleneckRadar() {
-    const { tasks, projects, radarSelectedTask, setRadarSelectedTask, hiddenProjects, toggleProjectVisibility } = useStore();
+    const { tasks, projects, radarSelectedTask, setRadarSelectedTask, toggleProjectVisibility } = useStore();
 
-    // 1. Extract unique task names for the dropdown
+    // 1. Extract unique task names for the dropdown (Normalized for selection)
     const uniqueTaskNames = useMemo(() => {
-        const names = new Set(tasks.map(t => t.name));
-        return Array.from(names).sort((a, b) => a.localeCompare(b));
+        // Use a map to keep original casing but group by normalized name
+        const nameMap = new Map<string, string>();
+        tasks.forEach(t => {
+            const normalized = t.name.trim().toLowerCase();
+            if (!nameMap.has(normalized)) {
+                nameMap.set(normalized, t.name.trim());
+            }
+        });
+        return Array.from(nameMap.values()).sort((a, b) => a.localeCompare(b));
     }, [tasks]);
 
-    // 2. Filter tasks by selected name
+    // 2. Filter tasks by selected name (Case-insensitive & trimmed matching)
     const relevantTasks = useMemo(() => {
         if (!radarSelectedTask) return [];
-        return tasks.filter(t => t.name === radarSelectedTask);
+        const normalizedSelected = radarSelectedTask.trim().toLowerCase();
+        return tasks.filter(t => t.name.trim().toLowerCase() === normalizedSelected);
     }, [tasks, radarSelectedTask]);
 
     // 3. Build the unified time scale — single source of truth for ALL positions
@@ -44,9 +52,9 @@ export function BottleneckRadar() {
                 tasks: projectTasks,
                 order: projects.find(p => p.name === name)?.order ?? 999
             }))
-            .filter(row => !hiddenProjects.includes(row.name))
+            // NOTE: We don't filter out hiddenProjects here because Radar is for cross-project analysis
             .sort((a, b) => a.order - b.order);
-    }, [relevantTasks, radarSelectedTask, projects, hiddenProjects]);
+    }, [relevantTasks, radarSelectedTask, projects]);
 
     if (tasks.length === 0) return null;
 
