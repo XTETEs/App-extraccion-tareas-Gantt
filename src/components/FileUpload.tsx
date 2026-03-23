@@ -176,7 +176,25 @@ export function FileUpload() {
                 let firstProjectStartDate: Date | undefined = undefined;
                 let firstProjectEndDate: Date | undefined = undefined;
 
+                // The project name is always the name of the FIRST sheet
+                const firstSheetName = workbook.SheetNames[0];
+                // Sheets with these names are metadata/config tabs and should be skipped entirely
+                // (unless they happen to be the first sheet)
+                const SKIP_SHEET_NAMES = [
+                    'obra', 'cliente', 'actividad', 'actividades', 'tarea', 'descripcion',
+                    'nombre', 'datos', 'data', 'resumen', 'summary', 'info',
+                    'sheet1', 'sheet 1', 'hoja1', 'hoja 1', 'tasks', 'tareas', 'gantt',
+                    'proyecto', 'proyectos', 'lista', 'listado'
+                ];
+
                 for (const sheetName of workbook.SheetNames) {
+                    // Skip secondary sheets that are known metadata/header tabs
+                    const isFirstSheet = sheetName === firstSheetName;
+                    const isSkipName = SKIP_SHEET_NAMES.includes(sheetName.toLowerCase().trim());
+                    if (!isFirstSheet && isSkipName) {
+                        console.log(`[FileUpload] Ignorando hoja secundaria: "${sheetName}"`);
+                        continue;
+                    }
                     const sheet = workbook.Sheets[sheetName];
                     const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
@@ -248,11 +266,8 @@ export function FileUpload() {
                     const sheetTasks: Task[] = [];
                     const dataRows = jsonData.slice(headerRowIndex + 1);
 
-                    // Determine Project Name for this sheet
-                    const genericNames = ['sheet1', 'sheet 1', 'hoja1', 'hoja 1', 'tasks', 'tareas', 'gantt'];
-                    const isGeneric = genericNames.includes(String(sheetName || '').toLowerCase().trim());
-                    const filenameBase = file.name.replace(/\.[^/.]+$/, "");
-                    const projectName = isGeneric ? filenameBase : sheetName;
+                    // Project name is always the first sheet's name (or filename if too generic)
+                    const projectName = firstSheetName;
 
                     dataRows.forEach((row: any) => {
                         const obj: any = {};
