@@ -300,6 +300,14 @@ export function FileUpload() {
                             }
                         }
 
+                        // Auto-detect "Industriales" column (by name, case-insensitive)
+                        const industrialHeader = headers.find(h =>
+                            String(h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() === 'industriales'
+                        );
+                        const industrial = industrialHeader && obj[industrialHeader]
+                            ? String(obj[industrialHeader]).trim()
+                            : undefined;
+
                         sheetTasks.push({
                             id: Math.random().toString(36).substr(2, 9),
                             projectId: projectName,
@@ -312,7 +320,8 @@ export function FileUpload() {
                             type: 'T',
                             delayDays: (progress >= 100) ? 0 : differenceInCalendarDays(new Date(), endDate),
                             totalSlack: slack,
-                            progress: progress
+                            progress: progress,
+                            industrial: industrial || undefined
                         });
                     });
 

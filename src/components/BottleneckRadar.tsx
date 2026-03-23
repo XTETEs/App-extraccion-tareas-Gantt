@@ -253,6 +253,11 @@ export function BottleneckRadar() {
                                                                     }}
                                                                 >
                                                                     <span className="text-[10px] font-black opacity-90 shrink-0">S{isoWeek}</span>
+                                                                    {task.industrial && clampedWidth > 80 && (
+                                                                        <span className="text-[10px] font-semibold truncate flex-1 text-center opacity-95 px-1">
+                                                                            {task.industrial}
+                                                                        </span>
+                                                                    )}
                                                                     <span className="text-[10px] font-bold truncate shrink-0">{durationDays}d</span>
                                                                 </div>
                                                             </TooltipTrigger>
@@ -264,6 +269,9 @@ export function BottleneckRadar() {
                                                                     </p>
                                                                     <p className="text-xs font-semibold text-primary">Semana inicio: S{isoWeek}</p>
                                                                     <p className="text-xs font-semibold text-orange-500">{durationDays} días naturales</p>
+                                                                    {task.industrial && (
+                                                                        <p className="text-xs font-semibold text-emerald-500">🔧 {task.industrial}</p>
+                                                                    )}
                                                                 </div>
                                                             </TooltipContent>
                                                         </Tooltip>
