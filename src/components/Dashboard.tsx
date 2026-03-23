@@ -13,7 +13,7 @@ import { cn, stringToColor, getLeafTasks } from '../lib/utils'; // Keep this if 
 export function Dashboard() {
     const { tasks, projects, dateRange, hiddenProjects, isReportGenerated } = useStore();
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'gantt' | 'analysis' | 'radar' | 'portfolio'>('portfolio');
+    const [viewMode, setViewMode] = useState<'gantt' | 'analysis' | 'radar' | 'portfolio'>('gantt');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Use projects from store which are ordered via Drag & Drop
