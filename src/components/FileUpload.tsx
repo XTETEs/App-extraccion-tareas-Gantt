@@ -15,7 +15,7 @@ export function FileUpload() {
         setMappingModalOpen,
         tasks
     } = useStore();
-    const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+    const [pendingFiles, setPendingFiles] = useState<{file: File, blobUrl?: string}[]>([]);
     const [uploadedBlobs, setUploadedBlobs] = useState<any[]>([]);
     const [syncStatus, setSyncStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [syncMessage, setSyncMessage] = useState<string>('');
@@ -29,8 +29,10 @@ export function FileUpload() {
             });
             const newBlob = await response.json();
             setUploadedBlobs(prev => [...prev, newBlob]);
+            return newBlob.url;
         } catch (error) {
             console.error('Error uploading file:', error);
+            return undefined;
         }
     };
 
@@ -38,8 +40,8 @@ export function FileUpload() {
     useEffect(() => {
         if (columnMapping && pendingFiles.length > 0) {
             // Process all pending files
-            pendingFiles.forEach(file => {
-                processFile(file);
+            pendingFiles.forEach(item => {
+                processFile(item.file, item.blobUrl);
             });
             setPendingFiles([]);
         }
@@ -234,11 +236,10 @@ export function FileUpload() {
                     if (!firstProjectStartDate) firstProjectStartDate = currentSheetProjectStartDate;
                     if (!firstProjectEndDate) firstProjectEndDate = currentSheetProjectEndDate;
 
-                    // Mapping check (only needs to happen once but we check headers for each sheet)
                     if (!columnMapping) {
                         setRawHeaders(headers);
                         setMappingModalOpen(true);
-                        setPendingFiles(prev => [...prev, file]);
+                        setPendingFiles(prev => [...prev, { file, blobUrl }]);
                         setSyncStatus('idle');
                         return; // Wait for mapping
                     }
@@ -351,9 +352,11 @@ export function FileUpload() {
         setIsDragging(false);
 
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            Array.from(e.dataTransfer.files).forEach(file => {
-                processFile(file);
-                uploadFile(file);
+            Array.from(e.dataTransfer.files).forEach(async file => {
+                setSyncStatus('loading');
+                setSyncMessage(`Subiendo archivo a la nube...`);
+                const blobUrl = await uploadFile(file);
+                processFile(file, blobUrl);
             });
             e.dataTransfer.clearData();
         }
@@ -386,9 +389,11 @@ export function FileUpload() {
                 accept=".xlsx,.xls,.csv"
                 onChange={(e) => {
                     if (e.target.files && e.target.files.length > 0) {
-                        Array.from(e.target.files).forEach(file => {
-                            processFile(file);
-                            uploadFile(file);
+                        Array.from(e.target.files).forEach(async file => {
+                            setSyncStatus('loading');
+                            setSyncMessage(`Subiendo archivo a la nube...`);
+                            const blobUrl = await uploadFile(file);
+                            processFile(file, blobUrl);
                         });
                         // Reset input so same file can be selected again if needed
                         e.target.value = '';
