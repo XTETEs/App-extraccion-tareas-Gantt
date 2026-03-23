@@ -154,9 +154,10 @@ export function Dashboard() {
                         </button>
                         <button
                             onClick={() => setViewMode('portfolio')}
-                            className={`px-3 md:px-4 text-xs md:text-sm font-medium py-1.5 rounded-md transition-all whitespace-nowrap ${viewMode === 'portfolio' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`px-3 md:px-4 flex items-center gap-2 text-xs md:text-sm font-medium py-1.5 rounded-md transition-all whitespace-nowrap ${viewMode === 'portfolio' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             Portafolio
+                            <span className="text-[10px] uppercase font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/20">Beta</span>
                         </button>
                     </div>
                 </div>
