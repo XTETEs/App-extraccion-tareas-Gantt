@@ -300,10 +300,12 @@ export function FileUpload() {
                             }
                         }
 
-                        // Auto-detect "Industriales" column (by name, case-insensitive)
-                        const industrialHeader = headers.find(h =>
-                            String(h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim() === 'industriales'
-                        );
+                        // Auto-detect "Industriales" column (more flexible matching)
+                        const industrialKeywords = ['industrial', 'contratista', 'empresa', 'gremio', 'asignado', 'proveedor'];
+                        const industrialHeader = headers.find(h => {
+                            const normalized = String(h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                            return industrialKeywords.some(key => normalized.includes(key));
+                        });
                         const industrial = industrialHeader && obj[industrialHeader]
                             ? String(obj[industrialHeader]).trim()
                             : undefined;
