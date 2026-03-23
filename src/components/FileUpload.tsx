@@ -154,7 +154,7 @@ export function FileUpload() {
                     const parts = str.split(/[-\/\s]+/);
                     if (parts.length === 3) {
                         const day = parseInt(parts[0], 10);
-                        const monthStr = parts[1].toLowerCase().substring(0, 3);
+                        const monthStr = parts[1] ? parts[1].toLowerCase().substring(0, 3) : '';
                         let year = parseInt(parts[2], 10);
 
                         if (!isNaN(day) && months[monthStr] !== undefined && !isNaN(year)) {
@@ -249,7 +249,7 @@ export function FileUpload() {
 
                     // Determine Project Name for this sheet
                     const genericNames = ['sheet1', 'sheet 1', 'hoja1', 'hoja 1', 'tasks', 'tareas', 'gantt'];
-                    const isGeneric = genericNames.includes(sheetName.toLowerCase().trim());
+                    const isGeneric = genericNames.includes(String(sheetName || '').toLowerCase().trim());
                     const filenameBase = file.name.replace(/\.[^/.]+$/, "");
                     const projectName = isGeneric ? filenameBase : sheetName;
 
@@ -273,7 +273,7 @@ export function FileUpload() {
 
                         const progressKeywords = ['% completado', '% avance', '% complete', 'avance', 'progreso', 'completado', 'complete', '% trabajo'];
                         for (const h of headers) {
-                            if (progressKeywords.some(k => h.toLowerCase().includes(k))) {
+                            if (progressKeywords.some(k => String(h || '').toLowerCase().includes(k))) {
                                 const raw = obj[h];
                                 if (raw !== undefined && raw !== null) {
                                     let val = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(',', '.'));
