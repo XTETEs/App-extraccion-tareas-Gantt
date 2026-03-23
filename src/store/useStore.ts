@@ -79,77 +79,99 @@ export const useStore = create<AppState>((set) => ({
         // 1. Clean up existing tasks for these projects to prevent duplicates (Snapshot logic)
         await db.tasks.where('projectName').anyOf(uniqueProjectNames).delete();
 
-        // 2. Add new tasks to DB and State
+        // 2. Add new tasks to DB
         await db.tasks.bulkAdd(newTasks);
 
-        set((state) => ({
-            tasks: [
-                ...state.tasks.filter(t => !uniqueProjectNames.includes(t.projectName)),
-                ...newTasks
-            ],
-            isReportGenerated: false
-        }));
-
-        // 3. Handle Projects creation/update
+        // 3. Handle Projects creation/update in DB and collect changes for State
         try {
             const existingProjects = await db.projects.toArray();
-            const existingNames = new Set(existingProjects.map(p => p.name));
+            const existingNamesSet = new Set(existingProjects.map(p => p.name));
+            
+            const projectsToAdd: Project[] = [];
+            const projectsToUpdate: Map<string, Partial<Project>> = new Map();
+            
+            let currentMaxOrder = existingProjects.length > 0
+                ? Math.max(...existingProjects.map(p => p.order || 0))
+                : -1;
 
             for (const name of uniqueProjectNames) {
-                if (!existingNames.has(name)) {
-                    const maxOrder = existingProjects.length > 0
-                        ? Math.max(...existingProjects.map(p => p.order || 0))
-                        : -1;
-
-                    const newProjectData = {
+                if (!existingNamesSet.has(name)) {
+                    currentMaxOrder++;
+                    const newProject: Project = {
                         id: name,
                         name,
                         lastUpdated: new Date(),
-                        order: maxOrder + 1,
+                        order: currentMaxOrder,
                         startDate: projectDates?.startDate,
                         endDate: projectDates?.endDate,
                         blobUrl: projectDates?.blobUrl,
                     };
-
-                    await db.projects.add(newProjectData as any);
-
-                    set(state => ({
-                        projects: [...state.projects, {
-                            id: newProjectData.id,
-                            name: newProjectData.name,
-                            order: newProjectData.order,
-                            startDate: newProjectData.startDate,
-                            endDate: newProjectData.endDate,
-                            blobUrl: newProjectData.blobUrl,
-                        }]
-                    }));
+                    projectsToAdd.push(newProject);
+                    existingNamesSet.add(name); // Prevent duplicate adds in same batch
                 } else {
-                    // Update Existing with new dates/blobUrl if provided
                     const updateData: any = { lastUpdated: new Date() };
                     if (projectDates?.startDate) updateData.startDate = projectDates.startDate;
                     if (projectDates?.endDate) updateData.endDate = projectDates.endDate;
                     if (projectDates?.blobUrl) updateData.blobUrl = projectDates.blobUrl;
-
-                    if (Object.keys(updateData).length > 1) {
-                        await db.projects.update(name, updateData);
-
-                        set(state => ({
-                            projects: state.projects.map(p =>
-                                p.id === name
-                                    ? {
-                                        ...p,
-                                        startDate: projectDates?.startDate || p.startDate,
-                                        endDate: projectDates?.endDate || p.endDate,
-                                        blobUrl: projectDates?.blobUrl || p.blobUrl,
-                                    }
-                                    : p
-                            )
-                        }));
-                    }
+                    
+                    projectsToUpdate.set(name, updateData);
                 }
             }
+
+            // Perform DB operations
+            if (projectsToAdd.length > 0) {
+                await db.projects.bulkAdd(projectsToAdd as any);
+            }
+            
+            for (const [name, updateData] of projectsToUpdate.entries()) {
+                await db.projects.update(name, updateData);
+            }
+
+            // 4. Final State Update (Atomic)
+            set((state) => {
+                const newTasksState = [
+                    ...state.tasks.filter(t => !uniqueProjectNames.includes(t.projectName)),
+                    ...newTasks
+                ];
+
+                let newProjectsState = [...state.projects];
+                
+                // Process updates in state
+                if (projectsToUpdate.size > 0) {
+                    newProjectsState = newProjectsState.map(p => {
+                        const update = projectsToUpdate.get(p.id);
+                        return update ? { ...p, ...update } : p;
+                    });
+                }
+
+                // Process additions in state
+                if (projectsToAdd.length > 0) {
+                    newProjectsState = [...newProjectsState, ...projectsToAdd.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        order: p.order,
+                        startDate: p.startDate,
+                        endDate: p.endDate,
+                        blobUrl: p.blobUrl
+                    }))];
+                }
+
+                return {
+                    tasks: newTasksState,
+                    projects: newProjectsState,
+                    isReportGenerated: false
+                };
+            });
         } catch (error) {
             console.error("Failed to handle projects creation/update:", error);
+            // Even if projects fail, update tasks so user sees something
+            set((state) => ({
+                tasks: [
+                    ...state.tasks.filter(t => !uniqueProjectNames.includes(t.projectName)),
+                    ...newTasks
+                ],
+                isReportGenerated: false
+            }));
         }
     },
 

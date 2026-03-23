@@ -123,255 +123,213 @@ export function FileUpload() {
     }, []); // Run once on mount
 
     const processFile = (file: File, blobUrl?: string) => {
-        // If we don't have a mapping yet, queue it.
-        // CHECK: If we already have pending files, we just add to them?
-        // Actually, we need to check columnMapping inside the function or before calling it.
-        // But processFile is called by onDrop/onChange.
-
-        // Let's modify the flow slightly: 
-        // 1. Read the file to get headers. 
-        // 2. If no mapping, set headers and queue THIS file (and any others).
-        // The issue is reading is async.
+        setSyncStatus('loading');
+        setSyncMessage(`Procesando ${file.name}...`);
 
         const reader = new FileReader();
         reader.onload = (e) => {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer);
-            const workbook = XLSX.read(data, { type: 'array', cellDates: true }); // cellDates true to get Date objects
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            try {
+                const data = new Uint8Array(e.target?.result as ArrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
 
-            if (jsonData.length === 0) return false;
+                // Define parseFlexibleDate helper
+                const parseFlexibleDate = (val: any): Date | undefined => {
+                    if (val instanceof Date && !isNaN(val.getTime())) return val;
+                    if (val === undefined || val === null || val === '') return undefined;
 
-            // Smart Header Detection
-            // We scan the first 20 rows to find the one that looks like a header row
-            // Criteria: Contains "Task", "Tarea", "Descripcion" OR "Fecha"
-            let headerRowIndex = 0;
-            let detectedHeaders: string[] = [];
+                    if (typeof val === 'number') {
+                        const d = new Date(Math.round((val - 25569) * 864e5));
+                        if (!isNaN(d.getTime())) return d;
+                        return undefined;
+                    }
 
-            for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
-                const row = jsonData[i] as any[];
-                if (!row) continue;
-                // Convert row to string array for checking
-                const rowValues = row.map(cell => String(cell).toUpperCase());
+                    const str = String(val).trim();
+                    if (!str) return undefined;
 
-                const hasTask = rowValues.some(v => v.includes('TAREA') || v.includes('TASK') || v.includes('DESCRIPCION') || v.includes('ACTIVIDAD') || v.includes('NOMBRE'));
-                const hasDate = rowValues.some(v => v.includes('FECHA') || v.includes('DATE') || v.includes('INICIO') || v.includes('START'));
+                    const months: Record<string, number> = {
+                        'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5,
+                        'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11
+                    };
 
-                if (hasTask && hasDate) {
-                    headerRowIndex = i;
-                    detectedHeaders = rowValues; // Use the uppercase normalized headers or original? Let's use original for display
-                    // Actually, let's use the original values from row but strictly as strings
-                    detectedHeaders = (jsonData[i] as any[]).map(String);
-                    break;
-                }
-            }
+                    const parts = str.split(/[-\/\s]+/);
+                    if (parts.length === 3) {
+                        const day = parseInt(parts[0], 10);
+                        const monthStr = parts[1].toLowerCase().substring(0, 3);
+                        let year = parseInt(parts[2], 10);
 
-            // If no smart header found, fallback to row 0
-            if (detectedHeaders.length === 0) {
-                detectedHeaders = (jsonData[0] as any[]).map(String);
-                headerRowIndex = 0;
-            }
+                        if (!isNaN(day) && months[monthStr] !== undefined && !isNaN(year)) {
+                            if (year < 100) year += 2000;
+                            const d = new Date(year, months[monthStr], day);
+                            if (!isNaN(d.getTime())) return d;
+                        }
+                    }
 
-            const headers = detectedHeaders;
-
-            // --- GLOBAL PROJECT DATES EXTRACTION ---
-            let projectStartDate: Date | undefined = undefined;
-            let projectEndDate: Date | undefined = undefined;
-
-            const parseFlexibleDate = (val: any): Date | undefined => {
-                if (val instanceof Date && !isNaN(val.getTime())) return val;
-                if (!val) return undefined;
-
-                const str = String(val).trim();
-                // Handle "03-nov-25" or "03-nov-2025"
-                // This is a common format in Spanish Excel
-                const months: Record<string, number> = {
-                    'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5,
-                    'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11
+                    const d = new Date(str);
+                    return !isNaN(d.getTime()) ? d : undefined;
                 };
 
-                const parts = str.split(/[-\/\s]+/);
-                if (parts.length === 3) {
-                    const day = parseInt(parts[0], 10);
-                    const monthStr = parts[1].toLowerCase().substring(0, 3);
-                    let year = parseInt(parts[2], 10);
+                // Collect tasks from all sheets
+                const allParsedTasks: Task[] = [];
+                let totalSheetsProcessed = 0;
+                let firstProjectStartDate: Date | undefined = undefined;
+                let firstProjectEndDate: Date | undefined = undefined;
 
-                    if (!isNaN(day) && months[monthStr] !== undefined && !isNaN(year)) {
-                        if (year < 100) year += 2000;
-                        const d = new Date(year, months[monthStr], day);
-                        if (!isNaN(d.getTime())) return d;
-                    }
-                }
+                for (const sheetName of workbook.SheetNames) {
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-                const d = new Date(str);
-                return !isNaN(d.getTime()) ? d : undefined;
-            };
+                    if (jsonData.length === 0) continue;
 
-            for (let i = 0; i < Math.min(jsonData.length, 30); i++) {
-                const row = jsonData[i] as any[];
-                if (!row) continue;
+                    // Smart Header Detection
+                    let headerRowIndex = 0;
+                    let detectedHeaders: string[] = [];
 
-                for (let cellIdx = 0; cellIdx < row.length; cellIdx++) {
-                    const cellVal = row[cellIdx];
-                    if (!cellVal) continue;
+                    for (let i = 0; i < Math.min(jsonData.length, 30); i++) {
+                        const row = jsonData[i] as any[];
+                        if (!row) continue;
+                        const rowValues = row.map(cell => String(cell || '').toUpperCase());
 
-                    const cellStr = String(cellVal).toLowerCase().trim();
+                        const hasTask = rowValues.some(v => v.includes('TAREA') || v.includes('TASK') || v.includes('DESCRIPCION') || v.includes('ACTIVIDAD') || v.includes('NOMBRE'));
+                        const hasDate = rowValues.some(v => v.includes('FECHA') || v.includes('DATE') || v.includes('INICIO') || v.includes('START'));
 
-                    // Match labels: "inicio de proyecto", "fecha inicio", "obra inicio", etc.
-                    const isStartLabel = cellStr.includes('inicio') && (cellStr.includes('proyecto') || cellStr.includes('fecha') || cellStr.includes('obra'));
-                    const isEndLabel = (cellStr.includes('fin') || cellStr.includes('termino') || cellStr.includes('final')) && (cellStr.includes('proyecto') || cellStr.includes('fecha') || cellStr.includes('obra'));
-
-                    if (isStartLabel && !projectStartDate) {
-                        // Search next 15 cells in the same row for a date
-                        for (let k = 1; k <= 15; k++) {
-                            const candidate = row[cellIdx + k];
-                            const d = parseFlexibleDate(candidate);
-                            if (d) {
-                                projectStartDate = d;
-                                break;
-                            }
-                        }
-                    }
-                    if (isEndLabel && !projectEndDate) {
-                        // Search next 15 cells in the same row for a date
-                        for (let k = 1; k <= 15; k++) {
-                            const candidate = row[cellIdx + k];
-                            const d = parseFlexibleDate(candidate);
-                            if (d) {
-                                projectEndDate = d;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (projectStartDate && projectEndDate) break;
-            }
-
-            // GLOBAL STORE CHECK: Do we have a mapping?
-            if (!columnMapping) {
-                setRawHeaders(headers);
-                setMappingModalOpen(true);
-                setPendingFiles(prev => [...prev, file]);
-                console.log("Headers detected at row " + headerRowIndex);
-                return true;
-            }
-
-            // If we DO have a mapping, parse the data
-            const parsedTasks: Task[] = [];
-            const dataRows = jsonData.slice(headerRowIndex + 1);
-
-            const jsonDataObjects = dataRows.map((row: any) => {
-                const obj: any = {};
-                headers.forEach((header, index) => {
-                    obj[header] = row[index];
-                });
-                return obj;
-            });
-
-            jsonDataObjects.forEach((row: any) => {
-                const projectName = sheetName;
-                const taskName = row[columnMapping.taskCol];
-                const startDate = parseFlexibleDate(row[columnMapping.startCol]);
-                const endDate = parseFlexibleDate(row[columnMapping.endCol]);
-
-                if (!startDate || !endDate) {
-                    return;
-                }
-
-                if (projectName && taskName) {
-                    const normalizeString = (str: string) =>
-                        str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-                    const normalizedTaskName = normalizeString(String(taskName));
-                    const IGNORED_KEYWORDS = [
-                        'gestion de residuos',
-                        'seguridad y salud',
-                        'contenedores',
-                        'epp'
-                    ];
-
-                    if (IGNORED_KEYWORDS.some(keyword => normalizedTaskName.includes(keyword))) {
-                        return;
-                    }
-
-                    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                        return;
-                    }
-
-                    const validStartDate = startDate;
-                    const validEndDate = endDate;
-
-                    const wbs = columnMapping.wbsCol ? row[columnMapping.wbsCol] : undefined;
-                    const type = columnMapping.typeCol ? row[columnMapping.typeCol] : undefined;
-                    const slack = columnMapping.slackCol ? parseFloat(row[columnMapping.slackCol]) : undefined;
-                    const isMilestone = columnMapping.milestoneCol ? !!row[columnMapping.milestoneCol] : false;
-
-                    // Auto-detect progress column by common header names
-                    let progress: number | undefined = undefined;
-                    const progressKeywords = ['% completado', '% avance', '% complete', 'avance', 'progreso', 'completado', 'complete', '% trabajo'];
-                    for (const header of headers) {
-                        const lh = header.toLowerCase().trim();
-                        if (progressKeywords.some(k => lh.includes(k))) {
-                            const raw = row[header];
-                            if (raw !== undefined && raw !== null) {
-                                let val = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(',', '.'));
-                                // Some tools export as 0-1 fraction instead of 0-100
-                                if (!isNaN(val) && val <= 1) val = val * 100;
-                                if (!isNaN(val)) progress = Math.round(val);
-                            }
+                        if (hasTask && hasDate) {
+                            headerRowIndex = i;
+                            detectedHeaders = (jsonData[i] as any[]).map(h => String(h || ''));
                             break;
                         }
                     }
 
-                    let budget: number | undefined = undefined;
-                    if (columnMapping.budgetCol && row[columnMapping.budgetCol]) {
-                        const val = row[columnMapping.budgetCol];
-                        if (typeof val === 'number') {
-                            budget = val;
-                        } else if (typeof val === 'string') {
-                            let clean = val.replace(/\./g, '');
-                            clean = clean.replace(',', '.');
-                            clean = clean.replace(/[^0-9.-]/g, '');
-                            const parsed = parseFloat(clean);
-                            if (!isNaN(parsed)) budget = parsed;
+                    if (detectedHeaders.length === 0) {
+                        detectedHeaders = (jsonData[0] as any[]).map(h => String(h || ''));
+                    }
+
+                    const headers = detectedHeaders;
+                    let currentSheetProjectStartDate: Date | undefined = undefined;
+                    let currentSheetProjectEndDate: Date | undefined = undefined;
+
+                    // Parse Dates for this sheet
+                    for (let i = 0; i < Math.min(jsonData.length, 50); i++) {
+                        const row = jsonData[i] as any[];
+                        if (!row) continue;
+                        for (let cellIdx = 0; cellIdx < row.length; cellIdx++) {
+                            const cellStr = String(row[cellIdx] || '').toLowerCase().trim();
+                            const isStartLabel = cellStr.includes('inicio') && (cellStr.includes('proyecto') || cellStr.includes('fecha') || cellStr.includes('obra'));
+                            const isEndLabel = (cellStr.includes('fin') || cellStr.includes('termino') || cellStr.includes('final')) && (cellStr.includes('proyecto') || cellStr.includes('fecha') || cellStr.includes('obra'));
+
+                            if (isStartLabel && !currentSheetProjectStartDate) {
+                                for (let k = 1; k <= 15; k++) {
+                                    const d = parseFlexibleDate(row[cellIdx + k]);
+                                    if (d) { currentSheetProjectStartDate = d; break; }
+                                }
+                            }
+                            if (isEndLabel && !currentSheetProjectEndDate) {
+                                for (let k = 1; k <= 15; k++) {
+                                    const d = parseFlexibleDate(row[cellIdx + k]);
+                                    if (d) { currentSheetProjectEndDate = d; break; }
+                                }
+                            }
                         }
                     }
 
-                    const today = new Date();
-                    // A completed task (100%) is never delayed, even if past due date
-                    const rawDelay = differenceInCalendarDays(today, validEndDate);
-                    const delayDays = (progress !== undefined && progress >= 100) ? 0 : rawDelay;
+                    if (!firstProjectStartDate) firstProjectStartDate = currentSheetProjectStartDate;
+                    if (!firstProjectEndDate) firstProjectEndDate = currentSheetProjectEndDate;
 
-                    const isCritical = (columnMapping.criticalCol && !!row[columnMapping.criticalCol]) ||
-                        (slack !== undefined && slack <= 0) ||
-                        isMilestone;
+                    // Mapping check (only needs to happen once but we check headers for each sheet)
+                    if (!columnMapping) {
+                        setRawHeaders(headers);
+                        setMappingModalOpen(true);
+                        setPendingFiles(prev => [...prev, file]);
+                        setSyncStatus('idle');
+                        return; // Wait for mapping
+                    }
 
-                    parsedTasks.push({
-                        id: Math.random().toString(36).substr(2, 9),
-                        projectId: projectName,
-                        projectName: projectName,
-                        name: taskName,
-                        startDate: validStartDate,
-                        endDate: validEndDate,
-                        isCritical: isCritical,
-                        wbs: wbs ? String(wbs) : undefined,
-                        type: type ? String(type) : 'T',
-                        delayDays: delayDays,
-                        totalSlack: slack,
-                        isMilestone: isMilestone,
-                        budget: budget,
-                        progress: progress
+                    // Parse tasks for this sheet
+                    const sheetTasks: Task[] = [];
+                    const dataRows = jsonData.slice(headerRowIndex + 1);
+
+                    // Determine Project Name for this sheet
+                    const genericNames = ['sheet1', 'sheet 1', 'hoja1', 'hoja 1', 'tasks', 'tareas', 'gantt'];
+                    const isGeneric = genericNames.includes(sheetName.toLowerCase().trim());
+                    const filenameBase = file.name.replace(/\.[^/.]+$/, "");
+                    const projectName = isGeneric ? filenameBase : sheetName;
+
+                    dataRows.forEach((row: any) => {
+                        const obj: any = {};
+                        headers.forEach((h, idx) => { obj[h] = row[idx]; });
+
+                        const taskName = obj[columnMapping.taskCol];
+                        const startDate = parseFlexibleDate(obj[columnMapping.startCol]);
+                        const endDate = parseFlexibleDate(obj[columnMapping.endCol]);
+
+                        if (!startDate || !endDate || !taskName) return;
+
+                        const normalizedTaskName = String(taskName).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                        const IGNORED_KEYWORDS = ['gestion de residuos', 'seguridad y salud', 'contenedores', 'epp'];
+                        if (IGNORED_KEYWORDS.some(k => normalizedTaskName.includes(k))) return;
+
+                        const wbs = columnMapping.wbsCol ? obj[columnMapping.wbsCol] : undefined;
+                        const slack = columnMapping.slackCol ? parseFloat(obj[columnMapping.slackCol]) : undefined;
+                        let progress = 0;
+
+                        const progressKeywords = ['% completado', '% avance', '% complete', 'avance', 'progreso', 'completado', 'complete', '% trabajo'];
+                        for (const h of headers) {
+                            if (progressKeywords.some(k => h.toLowerCase().includes(k))) {
+                                const raw = obj[h];
+                                if (raw !== undefined && raw !== null) {
+                                    let val = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(',', '.'));
+                                    if (!isNaN(val) && val <= 1) val *= 100;
+                                    if (!isNaN(val)) progress = Math.round(val);
+                                }
+                                break;
+                            }
+                        }
+
+                        sheetTasks.push({
+                            id: Math.random().toString(36).substr(2, 9),
+                            projectId: projectName,
+                            projectName: projectName,
+                            name: String(taskName),
+                            startDate,
+                            endDate,
+                            isCritical: (columnMapping.criticalCol && !!obj[columnMapping.criticalCol]) || (slack !== undefined && slack <= 0),
+                            wbs: wbs ? String(wbs) : undefined,
+                            type: 'T',
+                            delayDays: (progress >= 100) ? 0 : differenceInCalendarDays(new Date(), endDate),
+                            totalSlack: slack,
+                            progress: progress
+                        });
                     });
-                }
-            });
 
-            addTasks(parsedTasks, { startDate: projectStartDate, endDate: projectEndDate, blobUrl });
-            return true;
+                    if (sheetTasks.length > 0) {
+                        allParsedTasks.push(...sheetTasks);
+                        totalSheetsProcessed++;
+                    }
+                }
+
+                if (allParsedTasks.length > 0) {
+                    addTasks(allParsedTasks, { startDate: firstProjectStartDate, endDate: firstProjectEndDate, blobUrl });
+                    setSyncStatus('success');
+                    setSyncMessage(`Cargadas ${allParsedTasks.length} tareas desde ${totalSheetsProcessed} hoja(s).`);
+                    setTimeout(() => { if (syncStatus === 'success') setSyncStatus('idle'); }, 5000);
+                } else {
+                    setSyncStatus('error');
+                    setSyncMessage('No se encontraron tareas válidas en el archivo.');
+                }
+
+                } catch (err: any) {
+                console.error("Error processing file:", err);
+                setSyncStatus('error');
+                setSyncMessage(`Error: ${err.message}`);
+            }
+        };
+        reader.onerror = () => {
+            setSyncStatus('error');
+            setSyncMessage('Error al leer el archivo.');
         };
         reader.readAsArrayBuffer(file);
         return true;
     };
+
     const onDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();

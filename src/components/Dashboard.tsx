@@ -82,7 +82,13 @@ export function Dashboard() {
                 <Sidebar
                     projects={projects}
                     selectedProjectId={selectedProjectId}
-                    onSelectProject={setSelectedProjectId}
+                    onSelectProject={(id) => {
+                        setSelectedProjectId(id);
+                        if (id) {
+                            setViewMode('gantt');
+                            useStore.getState().setReportGenerated(true);
+                        }
+                    }}
                 />
             </div>
 
@@ -104,6 +110,10 @@ export function Dashboard() {
                         onSelectProject={(id) => {
                             setSelectedProjectId(id);
                             setIsSidebarOpen(false);
+                            if (id) {
+                                setViewMode('gantt');
+                                useStore.getState().setReportGenerated(true);
+                            }
                         }}
                     />
                 </div>
