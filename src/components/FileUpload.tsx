@@ -49,15 +49,11 @@ export function FileUpload() {
 
     // Fetch and load remote files on mount
     useEffect(() => {
-        console.log('[FileUpload] useEffect ejecutándose - iniciando carga remota');
         const loadRemoteFiles = async () => {
-            console.log('[FileUpload] loadRemoteFiles iniciado');
             setSyncStatus('loading');
             setSyncMessage('Buscando archivos compartidos...');
             try {
-                console.log('[FileUpload] Llamando a /api/list-gantt');
                 const res = await fetch('/api/list-gantt');
-                console.log('[FileUpload] Respuesta recibida:', res.status, res.statusText);
                 if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
 
                 const text = await res.text();
@@ -68,10 +64,8 @@ export function FileUpload() {
                     return;
                 }
                 const data = JSON.parse(text);
-                console.log('[FileUpload] Datos recibidos:', data);
 
                 if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
-                    console.log(`[FileUpload] Encontrados ${data.urls.length} archivos`);
                     setSyncMessage(`Encontrados ${data.urls.length} archivos. Descargando...`);
                     // Update list of uploaded blobs for display
                     setUploadedBlobs(data.urls.map((url: string) => ({ url, pathname: url })));
@@ -80,7 +74,6 @@ export function FileUpload() {
                     let successCount = 0;
                     for (const url of data.urls) {
                         try {
-                            console.log(`[FileUpload] Descargando archivo: ${url}`);
                             const fileRes = await fetch(url);
                             const blob = await fileRes.blob();
                             // Try to extract filename, fallback to generic
@@ -93,14 +86,12 @@ export function FileUpload() {
                             } catch (e) { }
 
                             const file = new File([blob], filename, { type: blob.type });
-                            console.log(`[FileUpload] Procesando archivo: ${filename}`);
                             const loaded = processFile(file, url); // pass blobUrl for remote tracking
                             if (loaded) successCount++;
                         } catch (err) {
                             console.error(`Failed to load remote file ${url}:`, err);
                         }
                     }
-                    console.log(`[FileUpload] Archivos procesados exitosamente: ${successCount}`);
                     if (successCount > 0) {
                         setSyncStatus('success');
                         setSyncMessage(`Sincronizados ${successCount} archivos desde la nube.`);
@@ -110,7 +101,6 @@ export function FileUpload() {
                         setSyncMessage('No se pudieron procesar los archivos.');
                     }
                 } else {
-                    console.log('[FileUpload] No hay archivos en la respuesta');
                     setSyncStatus('idle');
                     setSyncMessage('No hay archivos compartidos recientes.');
                 }
@@ -192,7 +182,6 @@ export function FileUpload() {
                     const isFirstSheet = sheetName === firstSheetName;
                     const isSkipName = SKIP_SHEET_NAMES.includes(sheetName.toLowerCase().trim());
                     if (!isFirstSheet && isSkipName) {
-                        console.log(`[FileUpload] Ignorando hoja secundaria: "${sheetName}"`);
                         continue;
                     }
                     const sheet = workbook.Sheets[sheetName];
