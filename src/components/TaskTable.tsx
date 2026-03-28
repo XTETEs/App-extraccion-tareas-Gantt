@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Task } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -22,20 +22,61 @@ export function TaskTable({ tasks }: TaskTableProps) {
     const { dateRange, projects } = useStore();
     const [collapsedProjects, setCollapsedProjects] = useState<string[]>([]);
 
-    // 1. Group by Project Name
-    const tasksByProject: Record<string, Task[]> = {};
-    tasks.forEach(task => {
-        const key = task.projectName || 'Sin Proyecto';
-        if (!tasksByProject[key]) tasksByProject[key] = [];
-        tasksByProject[key].push(task);
-    });
+    const { tasksByProject, sortedProjectNames } = useMemo(() => {
+        // 1. Group by Project Name
+        const grouped: Record<string, Task[]> = {};
+        tasks.forEach(task => {
+            const key = task.projectName || 'Sin Proyecto';
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(task);
+        });
 
-    // 2. Sort Project Names based on Store Order
-    const sortedProjectNames = Object.keys(tasksByProject).sort((a, b) => {
-        const orderA = projects.find(p => p.name === a)?.order ?? 999;
-        const orderB = projects.find(p => p.name === b)?.order ?? 999;
-        return orderA - orderB;
-    });
+        // 2. Sort Project Names based on Store Order
+        const sortedNames = Object.keys(grouped).sort((a, b) => {
+            const orderA = projects.find(p => p.name === a)?.order ?? 999;
+            const orderB = projects.find(p => p.name === b)?.order ?? 999;
+            return orderA - orderB;
+        });
+
+        Object.keys(grouped).forEach(key => {
+            grouped[key].sort((a, b) => {
+                // Custom WBS Segment Sort
+                const strA = a.wbs ? a.wbs.toString().trim() : '';
+                const strB = b.wbs ? b.wbs.toString().trim() : '';
+
+                if (strA && strB) {
+                    // Split by common separators (., -, space)
+                    const partsA = strA.split(/[.\-\s]+/);
+                    const partsB = strB.split(/[.\-\s]+/);
+
+                    const len = Math.min(partsA.length, partsB.length);
+                    for (let i = 0; i < len; i++) {
+                        const numA = parseInt(partsA[i], 10);
+                        const numB = parseInt(partsB[i], 10);
+
+                        if (!isNaN(numA) && !isNaN(numB)) {
+                            if (numA !== numB) return numA - numB;
+                        } else {
+                            // Fallback to string compare for non-numeric segments
+                            const cmp = partsA[i].localeCompare(partsB[i], undefined, { numeric: true });
+                            if (cmp !== 0) return cmp;
+                        }
+                    }
+                    // If prefix matches, shorter length first (1.1 before 1.1.1)
+                    return partsA.length - partsB.length;
+                }
+
+                // Tasks with WBS come first
+                if (strA && !strB) return -1;
+                if (!strA && strB) return 1;
+
+                // Tie-breaker: Date
+                return a.startDate.getTime() - b.startDate.getTime();
+            });
+        });
+
+        return { tasksByProject: grouped, sortedProjectNames: sortedNames };
+    }, [tasks, projects]);
 
     // Toggle Handlers
     const toggleProject = (projectName: string) => {
@@ -55,43 +96,6 @@ export function TaskTable({ tasks }: TaskTableProps) {
     };
 
     const allCollapsed = sortedProjectNames.length > 0 && collapsedProjects.length === sortedProjectNames.length;
-
-    Object.keys(tasksByProject).forEach(key => {
-        tasksByProject[key].sort((a, b) => {
-            // Custom WBS Segment Sort
-            const strA = a.wbs ? a.wbs.toString().trim() : '';
-            const strB = b.wbs ? b.wbs.toString().trim() : '';
-
-            if (strA && strB) {
-                // Split by common separators (., -, space)
-                const partsA = strA.split(/[\.\-\s]+/);
-                const partsB = strB.split(/[\.\-\s]+/);
-
-                const len = Math.min(partsA.length, partsB.length);
-                for (let i = 0; i < len; i++) {
-                    const numA = parseInt(partsA[i], 10);
-                    const numB = parseInt(partsB[i], 10);
-
-                    if (!isNaN(numA) && !isNaN(numB)) {
-                        if (numA !== numB) return numA - numB;
-                    } else {
-                        // Fallback to string compare for non-numeric segments
-                        const cmp = partsA[i].localeCompare(partsB[i], undefined, { numeric: true });
-                        if (cmp !== 0) return cmp;
-                    }
-                }
-                // If prefix matches, shorter length first (1.1 before 1.1.1)
-                return partsA.length - partsB.length;
-            }
-
-            // Tasks with WBS come first
-            if (strA && !strB) return -1;
-            if (!strA && strB) return 1;
-
-            // Tie-breaker: Date
-            return a.startDate.getTime() - b.startDate.getTime();
-        });
-    });
 
     return (
         <div className="w-full space-y-4">
