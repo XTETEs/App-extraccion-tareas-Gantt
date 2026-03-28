@@ -93,7 +93,6 @@ export function FileUpload() {
                             } catch (e) { }
 
                             const file = new File([blob], filename, { type: blob.type });
-                            console.log(`[FileUpload] Procesando archivo: ${filename}`);
                             const loaded = processFile(file, url); // pass blobUrl for remote tracking
                             if (loaded) successCount++;
                         } catch (err) {
