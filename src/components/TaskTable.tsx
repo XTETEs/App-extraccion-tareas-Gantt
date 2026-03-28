@@ -56,6 +56,12 @@ export function TaskTable({ tasks }: TaskTableProps) {
 
     const allCollapsed = sortedProjectNames.length > 0 && collapsedProjects.length === sortedProjectNames.length;
 
+    // Cache static date calculations per component render
+    const hasDateRange = Boolean(dateRange.from && dateRange.to);
+    const rangeStartMs = hasDateRange ? dateRange.from!.getTime() : 0;
+    const rangeEndMs = hasDateRange ? dateRange.to!.getTime() : 0;
+    const totalRangeMs = hasDateRange ? (rangeEndMs - rangeStartMs) : 0;
+
     Object.keys(tasksByProject).forEach(key => {
         tasksByProject[key].sort((a, b) => {
             // Custom WBS Segment Sort
@@ -215,25 +221,19 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                             let progressLeft = 0;
                                             let showBar = false;
 
-                                            if (dateRange.from && dateRange.to) {
-                                                const rangeStart = dateRange.from.getTime();
-                                                const rangeEnd = dateRange.to.getTime();
-                                                const totalRangeMs = rangeEnd - rangeStart;
+                                            if (hasDateRange && totalRangeMs > 0) {
+                                                const taskStart = task.startDate.getTime();
+                                                const taskEnd = task.endDate.getTime();
 
-                                                if (totalRangeMs > 0) {
-                                                    const taskStart = task.startDate.getTime();
-                                                    const taskEnd = task.endDate.getTime();
+                                                // Intersection
+                                                const start = Math.max(rangeStartMs, taskStart);
+                                                const end = Math.min(rangeEndMs, taskEnd);
 
-                                                    // Intersection
-                                                    const start = Math.max(rangeStart, taskStart);
-                                                    const end = Math.min(rangeEnd, taskEnd);
-
-                                                    if (end >= start) {
-                                                        const durationMs = end - start;
-                                                        progressPercent = (durationMs / totalRangeMs) * 100;
-                                                        progressLeft = ((start - rangeStart) / totalRangeMs) * 100;
-                                                        showBar = true;
-                                                    }
+                                                if (end >= start) {
+                                                    const durationMs = end - start;
+                                                    progressPercent = (durationMs / totalRangeMs) * 100;
+                                                    progressLeft = ((start - rangeStartMs) / totalRangeMs) * 100;
+                                                    showBar = true;
                                                 }
                                             }
 
@@ -320,10 +320,8 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                     </td>
                                                     <td className="px-6 py-4 text-right font-mono text-xs">
                                                         {(() => {
-                                                            if (!task.budget || !dateRange.from || !dateRange.to) return <span className="text-muted-foreground">-</span>;
+                                                            if (!task.budget || !hasDateRange) return <span className="text-muted-foreground">-</span>;
 
-                                                            const rangeStart = dateRange.from.getTime();
-                                                            const rangeEnd = dateRange.to.getTime();
                                                             const taskStart = task.startDate.getTime();
                                                             // Logic: If Start=End (0 duration), treat as ending next day for overlap check (1 day duration)
                                                             // This ensures 1-day tasks falling in the range are counted.
@@ -331,8 +329,8 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                             const taskEnd = (rawTaskEnd === taskStart) ? rawTaskEnd + 86400000 : rawTaskEnd;
 
                                                             // Overlap
-                                                            const overlapStart = Math.max(taskStart, rangeStart);
-                                                            const overlapEnd = Math.min(taskEnd, rangeEnd);
+                                                            const overlapStart = Math.max(taskStart, rangeStartMs);
+                                                            const overlapEnd = Math.min(taskEnd, rangeEndMs);
 
                                                             if (overlapStart < overlapEnd) {
                                                                 const overlapDuration = overlapEnd - overlapStart;
@@ -372,18 +370,15 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                             </td>
                                             <td className="px-6 py-4 text-right font-mono text-foreground">
                                                 {(() => {
-                                                    if (!dateRange.from || !dateRange.to) return '-';
-
-                                                    const rangeStart = dateRange.from.getTime();
-                                                    const rangeEnd = dateRange.to.getTime();
+                                                    if (!hasDateRange) return '-';
 
                                                     const total = projectTasks.reduce((acc, task) => {
                                                         if (!task.budget) return acc;
 
                                                         const taskStart = task.startDate.getTime();
                                                         const taskEnd = task.endDate.getTime();
-                                                        const overlapStart = Math.max(taskStart, rangeStart);
-                                                        const overlapEnd = Math.min(taskEnd, rangeEnd);
+                                                        const overlapStart = Math.max(taskStart, rangeStartMs);
+                                                        const overlapEnd = Math.min(taskEnd, rangeEndMs);
 
                                                         if (overlapStart < overlapEnd) {
                                                             const overlapDuration = overlapEnd - overlapStart;
