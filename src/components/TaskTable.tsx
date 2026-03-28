@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Task } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -22,6 +22,14 @@ export function TaskTable({ tasks }: TaskTableProps) {
     const { dateRange, projects } = useStore();
     const [collapsedProjects, setCollapsedProjects] = useState<string[]>([]);
 
+    const projectOrderMap = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const p of projects) {
+            map.set(p.name, p.order ?? 999);
+        }
+        return map;
+    }, [projects]);
+
     // 1. Group by Project Name
     const tasksByProject: Record<string, Task[]> = {};
     tasks.forEach(task => {
@@ -32,8 +40,8 @@ export function TaskTable({ tasks }: TaskTableProps) {
 
     // 2. Sort Project Names based on Store Order
     const sortedProjectNames = Object.keys(tasksByProject).sort((a, b) => {
-        const orderA = projects.find(p => p.name === a)?.order ?? 999;
-        const orderB = projects.find(p => p.name === b)?.order ?? 999;
+        const orderA = projectOrderMap.get(a) ?? 999;
+        const orderB = projectOrderMap.get(b) ?? 999;
         return orderA - orderB;
     });
 
