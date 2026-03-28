@@ -12,6 +12,10 @@ export default async function handler(request, response) {
         return response.status(405).json({ error: 'Method not allowed' });
     }
 
+    if (!process.env.AUTH_TOKEN || request.headers.authorization !== `Bearer ${process.env.AUTH_TOKEN}`) {
+        return response.status(401).json({ error: 'Unauthorized' });
+    }
+
     try {
         console.log('[clear-files] Starting deletion process');
 
