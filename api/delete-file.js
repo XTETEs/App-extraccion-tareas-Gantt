@@ -44,8 +44,7 @@ export default async function handler(request, response) {
     } catch (error) {
         console.error('[delete-file] Error:', error);
         return response.status(500).json({
-            error: error.message || 'Failed to delete file',
-            details: error.toString()
+            error: 'Failed to delete file'
         });
     }
 }
