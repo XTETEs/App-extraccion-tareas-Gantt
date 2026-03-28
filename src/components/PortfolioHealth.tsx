@@ -118,70 +118,95 @@ function ProjectCard({ project }: { project: ProjectHealth }) {
     );
 }
 
+export const calculatePortfolioHealthData = (tasks: any[], projects: any[]): ProjectHealth[] => {
+    const leafTasks = getLeafTasks(tasks);
+
+    return projects.map(project => {
+        const projectTasks = leafTasks.filter(t => t.projectName === project.name);
+        const totalTasks = projectTasks.length;
+        if (totalTasks === 0) return null;
+
+        let delayedCount = 0;
+        let criticalDelayedCount = 0;
+        const delayedTasks: any[] = [];
+
+        projectTasks.forEach(task => {
+            if ((task.delayDays || 0) > 0) {
+                delayedCount++;
+                delayedTasks.push(task);
+                if (task.isCritical) {
+                    criticalDelayedCount++;
+                }
+            }
+        });
+
+        // Sort delayed tasks by delay magnitude (highest first) and criticality
+        delayedTasks.sort((a, b) => {
+            if (a.isCritical !== b.isCritical) {
+                return a.isCritical ? -1 : 1;
+            }
+            return (b.delayDays || 0) - (a.delayDays || 0);
+        });
+
+        const delayedPercent = (delayedCount / totalTasks) * 100;
+
+        let status: 'healthy' | 'warning' | 'critical' = 'healthy';
+
+        if (criticalDelayedCount > 0 || delayedPercent > 10) {
+            status = 'critical';
+        } else if (delayedCount > 0) {
+            status = 'warning';
+        }
+
+        // Fallbacks if no explicit project dates
+        const taskStartDates = projectTasks.map(t => t.startDate.getTime());
+        const taskEndDates = projectTasks.map(t => t.endDate.getTime());
+
+        const minStart = taskStartDates.length > 0 ? new Date(Math.min(...taskStartDates)) : new Date();
+        const maxEnd = taskEndDates.length > 0 ? new Date(Math.max(...taskEndDates)) : new Date();
+
+        return {
+            ...project,
+            startDate: project.startDate || minStart,
+            endDate: project.endDate || maxEnd,
+            totalTasks,
+            delayedCount,
+            criticalDelayedCount,
+            delayedPercent,
+            delayedTasks,
+            status,
+            color: stringToColor(project.name),
+        };
+    }).filter((p): p is ProjectHealth => p !== null);
+}
+
+export function PortfolioSummary({ healthData }: { healthData: ProjectHealth[] }) {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-card p-4 rounded-xl border border-border/50 flex flex-col items-center text-center shadow-sm">
+                <h4 className="text-3xl font-bold">{healthData.length}</h4>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Obras Activas</span>
+            </div>
+            <div className="bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20 flex flex-col items-center text-center">
+                <h4 className="text-3xl font-bold text-emerald-600">{healthData.filter(d => d.status === 'healthy').length}</h4>
+                <span className="text-xs text-emerald-700 uppercase tracking-wider font-semibold mt-1">Saludables</span>
+            </div>
+            <div className="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 flex flex-col items-center text-center">
+                <h4 className="text-3xl font-bold text-amber-600">{healthData.filter(d => d.status === 'warning').length}</h4>
+                <span className="text-xs text-amber-700 uppercase tracking-wider font-semibold mt-1">En Precaución</span>
+            </div>
+            <div className="bg-red-500/10 p-4 rounded-xl border border-red-500/20 flex flex-col items-center text-center">
+                <h4 className="text-3xl font-bold text-red-600">{healthData.filter(d => d.status === 'critical').length}</h4>
+                <span className="text-xs text-red-700 uppercase tracking-wider font-semibold mt-1">Críticos</span>
+            </div>
+        </div>
+    );
+}
+
 export function PortfolioHealth() {
     const { tasks, projects } = useStore();
 
-    const healthData = useMemo(() => {
-        const leafTasks = getLeafTasks(tasks);
-        
-        return projects.map(project => {
-            const projectTasks = leafTasks.filter(t => t.projectName === project.name);
-            const totalTasks = projectTasks.length;
-            if (totalTasks === 0) return null;
-
-            let delayedCount = 0;
-            let criticalDelayedCount = 0;
-            const delayedTasks: any[] = [];
-
-            projectTasks.forEach(task => {
-                if ((task.delayDays || 0) > 0) {
-                    delayedCount++;
-                    delayedTasks.push(task);
-                    if (task.isCritical) {
-                        criticalDelayedCount++;
-                    }
-                }
-            });
-
-            // Sort delayed tasks by delay magnitude (highest first) and criticality
-            delayedTasks.sort((a, b) => {
-                if (a.isCritical !== b.isCritical) {
-                    return a.isCritical ? -1 : 1;
-                }
-                return (b.delayDays || 0) - (a.delayDays || 0);
-            });
-
-            const delayedPercent = (delayedCount / totalTasks) * 100;
-
-            let status: 'healthy' | 'warning' | 'critical' = 'healthy';
-            
-            if (criticalDelayedCount > 0 || delayedPercent > 10) {
-                status = 'critical';
-            } else if (delayedCount > 0) {
-                status = 'warning';
-            }
-
-            // Fallbacks if no explicit project dates
-            const taskStartDates = projectTasks.map(t => t.startDate.getTime());
-            const taskEndDates = projectTasks.map(t => t.endDate.getTime());
-            
-            const minStart = taskStartDates.length > 0 ? new Date(Math.min(...taskStartDates)) : new Date();
-            const maxEnd = taskEndDates.length > 0 ? new Date(Math.max(...taskEndDates)) : new Date();
-
-            return {
-                ...project,
-                startDate: project.startDate || minStart,
-                endDate: project.endDate || maxEnd,
-                totalTasks,
-                delayedCount,
-                criticalDelayedCount,
-                delayedPercent,
-                delayedTasks,
-                status,
-                color: stringToColor(project.name),
-            };
-        }).filter((p): p is ProjectHealth => p !== null); 
-    }, [tasks, projects]);
+    const healthData = useMemo(() => calculatePortfolioHealthData(tasks, projects), [tasks, projects]);
 
     if (healthData.length === 0) {
         return (
@@ -210,24 +235,7 @@ export function PortfolioHealth() {
             </h2>
             
             {/* KPI Summary Global */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-               <div className="bg-card p-4 rounded-xl border border-border/50 flex flex-col items-center text-center shadow-sm">
-                   <h4 className="text-3xl font-bold">{healthData.length}</h4>
-                   <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Obras Activas</span>
-               </div>
-               <div className="bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20 flex flex-col items-center text-center">
-                   <h4 className="text-3xl font-bold text-emerald-600">{healthData.filter(d => d.status === 'healthy').length}</h4>
-                   <span className="text-xs text-emerald-700 uppercase tracking-wider font-semibold mt-1">Saludables</span>
-               </div>
-               <div className="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 flex flex-col items-center text-center">
-                   <h4 className="text-3xl font-bold text-amber-600">{healthData.filter(d => d.status === 'warning').length}</h4>
-                   <span className="text-xs text-amber-700 uppercase tracking-wider font-semibold mt-1">En Precaución</span>
-               </div>
-               <div className="bg-red-500/10 p-4 rounded-xl border border-red-500/20 flex flex-col items-center text-center">
-                   <h4 className="text-3xl font-bold text-red-600">{healthData.filter(d => d.status === 'critical').length}</h4>
-                   <span className="text-xs text-red-700 uppercase tracking-wider font-semibold mt-1">Críticos</span>
-               </div>
-            </div>
+            <PortfolioSummary healthData={healthData} />
 
             {/* Grid of Projects */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
