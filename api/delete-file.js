@@ -17,6 +17,11 @@ export default async function handler(request, response) {
         return response.status(405).json({ error: 'Method not allowed' });
     }
 
+    const authHeader = request.headers.authorization;
+    if (!process.env.AUTH_TOKEN || authHeader !== `Bearer ${process.env.AUTH_TOKEN}`) {
+        return response.status(401).json({ error: 'Unauthorized' });
+    }
+
     try {
         const { url } = await new Promise((resolve, reject) => {
             let body = '';
