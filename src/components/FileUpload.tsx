@@ -68,7 +68,6 @@ export function FileUpload() {
                     return;
                 }
                 const data = JSON.parse(text);
-                console.log('[FileUpload] Datos recibidos:', data);
 
                 if (data.urls && Array.isArray(data.urls) && data.urls.length > 0) {
                     console.log(`[FileUpload] Encontrados ${data.urls.length} archivos`);
