@@ -100,7 +100,6 @@ export function FileUpload() {
                             console.error(`Failed to load remote file ${url}:`, err);
                         }
                     }
-                    console.log(`[FileUpload] Archivos procesados exitosamente: ${successCount}`);
                     if (successCount > 0) {
                         setSyncStatus('success');
                         setSyncMessage(`Sincronizados ${successCount} archivos desde la nube.`);
