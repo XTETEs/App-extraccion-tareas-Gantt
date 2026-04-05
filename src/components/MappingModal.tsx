@@ -14,7 +14,7 @@ export function MappingModal() {
 
             // Simple heuristic to find columns
             rawHeaders.forEach(header => {
-                const lower = header.toLowerCase();
+                const lower = String(header || '').toLowerCase();
                 // Project name is not a column anymore
                 if (lower.includes('tarea') || lower.includes('actividad') || lower.includes('descripcion')) newMapping.taskCol = header;
                 if (lower.includes('inicio') || lower.includes('comienzo')) newMapping.startCol = header;

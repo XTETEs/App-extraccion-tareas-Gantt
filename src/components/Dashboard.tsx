@@ -13,7 +13,7 @@ import { cn, stringToColor, getLeafTasks } from '../lib/utils'; // Keep this if 
 export function Dashboard() {
     const { tasks, projects, dateRange, hiddenProjects, isReportGenerated } = useStore();
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'gantt' | 'analysis' | 'radar' | 'portfolio'>('portfolio');
+    const [viewMode, setViewMode] = useState<'gantt' | 'analysis' | 'radar' | 'portfolio'>('gantt');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     // Use projects from store which are ordered via Drag & Drop
@@ -82,7 +82,13 @@ export function Dashboard() {
                 <Sidebar
                     projects={projects}
                     selectedProjectId={selectedProjectId}
-                    onSelectProject={setSelectedProjectId}
+                    onSelectProject={(id) => {
+                        setSelectedProjectId(id);
+                        if (id) {
+                            setViewMode('gantt');
+                            useStore.getState().setReportGenerated(true);
+                        }
+                    }}
                 />
             </div>
 
@@ -104,6 +110,10 @@ export function Dashboard() {
                         onSelectProject={(id) => {
                             setSelectedProjectId(id);
                             setIsSidebarOpen(false);
+                            if (id) {
+                                setViewMode('gantt');
+                                useStore.getState().setReportGenerated(true);
+                            }
                         }}
                     />
                 </div>
@@ -144,9 +154,10 @@ export function Dashboard() {
                         </button>
                         <button
                             onClick={() => setViewMode('portfolio')}
-                            className={`px-3 md:px-4 text-xs md:text-sm font-medium py-1.5 rounded-md transition-all whitespace-nowrap ${viewMode === 'portfolio' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`px-3 md:px-4 flex items-center gap-2 text-xs md:text-sm font-medium py-1.5 rounded-md transition-all whitespace-nowrap ${viewMode === 'portfolio' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             Portafolio
+                            <span className="text-[10px] uppercase font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-md border border-amber-500/20">Beta</span>
                         </button>
                     </div>
                 </div>

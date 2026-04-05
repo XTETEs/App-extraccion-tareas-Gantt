@@ -14,11 +14,13 @@ export interface Task {
     totalSlack?: number; // Holgura Total
     isMilestone?: boolean;
     budget?: number; // Presupuesto / Importe
+    industrial?: string; // Nombre del industrial/contratista asignado
 }
 
 export interface Project {
     id: string;
     name: string;
+    lastUpdated?: Date;
     order?: number;
     startDate?: Date;
     endDate?: Date;
