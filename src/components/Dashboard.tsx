@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { Sidebar } from './Sidebar';
 import { TaskTable } from './TaskTable';
@@ -22,6 +22,14 @@ export function Dashboard() {
     // --- HIERARCHY FILTERING ---
     // We only want LEAF nodes (tasks with no children) to avoid double counting.
     // Algorithm moved to utils for consistency across views.
+
+    const projectOrderMap = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const p of projects) {
+            map.set(p.name, p.order ?? 999);
+        }
+        return map;
+    }, [projects]);
 
     const leafTasks = getLeafTasks(tasks);
 
@@ -52,8 +60,8 @@ export function Dashboard() {
     }).sort((a, b) => {
         // Sort by Project Order first
         if (a.projectName !== b.projectName) {
-            const orderA = projects.find(p => p.name === a.projectName)?.order ?? 999;
-            const orderB = projects.find(p => p.name === b.projectName)?.order ?? 999;
+            const orderA = projectOrderMap.get(a.projectName) ?? 999;
+            const orderB = projectOrderMap.get(b.projectName) ?? 999;
             return orderA - orderB;
         }
         // Then by Task date/name if needed (optional, keeping current implicit order)

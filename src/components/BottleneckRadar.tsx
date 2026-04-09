@@ -37,6 +37,14 @@ export function BottleneckRadar() {
     // 3. Build the unified time scale — single source of truth for ALL positions
     const scale = useMemo(() => buildTimeScale(relevantTasks), [relevantTasks]);
 
+    const projectOrderMap = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const p of projects) {
+            map.set(p.name, p.order ?? 999);
+        }
+        return map;
+    }, [projects]);
+
     // 4. Group by project for the rows
     const projectRows = useMemo(() => {
         if (!radarSelectedTask) return [];
@@ -50,11 +58,11 @@ export function BottleneckRadar() {
             .map(([name, projectTasks]) => ({
                 name,
                 tasks: projectTasks,
-                order: projects.find(p => p.name === name)?.order ?? 999
+                order: projectOrderMap.get(name) ?? 999
             }))
             // NOTE: We don't filter out hiddenProjects here because Radar is for cross-project analysis
             .sort((a, b) => a.order - b.order);
-    }, [relevantTasks, radarSelectedTask, projects]);
+    }, [relevantTasks, radarSelectedTask, projectOrderMap]);
 
     if (tasks.length === 0) return null;
 
