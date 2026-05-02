@@ -2,7 +2,8 @@ import { useState } from 'react';
 import type { Task } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronRight, ChevronsDown, ChevronsUp, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { cn, stringToColor } from '../lib/utils';
 import { useStore } from '../store/useStore';
 import { Button } from './ui/button';
@@ -43,6 +44,49 @@ export function TaskTable({ tasks }: TaskTableProps) {
         if (filterTypeS && task.type !== 'S') return false;
         return true;
     });
+
+    const exportToExcel = () => {
+        if (filteredTasks.length === 0) return;
+
+        const exportData = filteredTasks.map(task => {
+            const isDelayed = (task.delayDays || 0) > 0;
+            const delayText = isDelayed ? `Retraso: +${task.delayDays} días` : 'En fecha';
+
+            return {
+                'Proyecto': task.projectName || 'Sin Proyecto',
+                'Tipo': task.type || 'P',
+                'WBS': task.wbs || '',
+                'Actividad / Tarea': task.name,
+                'Inicio': format(task.startDate, 'dd/MM/yyyy', { locale: es }),
+                'Fin': format(task.endDate, 'dd/MM/yyyy', { locale: es }),
+                'Días de Retraso': task.delayDays || 0,
+                'Estado': delayText,
+                'Holgura Total': task.totalSlack !== undefined ? task.totalSlack : '',
+                'Crítica': task.isCritical ? 'Sí' : 'No',
+            };
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Tareas");
+
+        // Ajustar anchos de columna
+        ws['!cols'] = [
+            { wch: 25 }, // Proyecto
+            { wch: 6 },  // Tipo
+            { wch: 15 }, // WBS
+            { wch: 50 }, // Tarea
+            { wch: 12 }, // Inicio
+            { wch: 12 }, // Fin
+            { wch: 16 }, // Retraso
+            { wch: 20 }, // Estado
+            { wch: 14 }, // Holgura
+            { wch: 10 }, // Crítica
+        ];
+
+        const fileName = `Exportacion_Tareas_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    };
 
     // 1. Group by Project Name
     const tasksByProject: Record<string, Task[]> = {};
@@ -146,26 +190,38 @@ export function TaskTable({ tasks }: TaskTableProps) {
                             <span className="mr-1">🔷</span> Solo Tipo S
                         </Button>
                     </div>
-                    {sortedProjectNames.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        {sortedProjectNames.length > 0 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleAll(!allCollapsed)}
+                                className="text-muted-foreground hover:text-foreground no-print"
+                            >
+                                {allCollapsed ? (
+                                    <>
+                                        <ChevronsDown className="h-4 w-4 mr-2" />
+                                        Desplegar Todo
+                                    </>
+                                ) : (
+                                    <>
+                                        <ChevronsUp className="h-4 w-4 mr-2" />
+                                        Replegar Todo
+                                    </>
+                                )}
+                            </Button>
+                        )}
                         <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            onClick={() => toggleAll(!allCollapsed)}
-                            className="text-muted-foreground hover:text-foreground no-print"
+                            onClick={exportToExcel}
+                            disabled={filteredTasks.length === 0}
+                            className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 rounded-full h-8 px-4 font-semibold transition-all no-print"
                         >
-                            {allCollapsed ? (
-                                <>
-                                    <ChevronsDown className="h-4 w-4 mr-2" />
-                                    Desplegar Todo
-                                </>
-                            ) : (
-                                <>
-                                    <ChevronsUp className="h-4 w-4 mr-2" />
-                                    Replegar Todo
-                                </>
-                            )}
+                            <Download className="h-4 w-4 mr-2" />
+                            Exportar Excel
                         </Button>
-                    )}
+                    </div>
                 </div>
             )}
 

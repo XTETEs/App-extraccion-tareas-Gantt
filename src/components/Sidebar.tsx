@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Project } from '../types';
 import { cn } from '../lib/utils';
-import { Building2, Layers, Calendar as CalendarIcon, Eye, EyeOff, Settings2, GripVertical } from 'lucide-react';
+import { Building2, Layers, Calendar as CalendarIcon, Eye, EyeOff, Settings2, GripVertical, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ProjectManagerModal } from './ProjectManagerModal';
 import { Button } from './ui/button';
@@ -106,6 +106,17 @@ function SortableProjectItem({ project, selectedProjectId, onSelectProject, hidd
 export function Sidebar({ projects, selectedProjectId, onSelectProject }: SidebarProps) {
     const { dateRange, setDateRange, hiddenProjects, toggleProjectVisibility, reorderProjects, setReportGenerated, clearData } = useStore();
     const [isManagerOpen, setIsManagerOpen] = useState(false);
+    const [isClearing, setIsClearing] = useState(false);
+    const [clearSuccess, setClearSuccess] = useState(false);
+    const [lastSavedTime, setLastSavedTime] = useState<string>('');
+
+    // Update last saved time when projects change
+    useEffect(() => {
+        if (projects.length > 0) {
+            const latest = new Date(Math.max(...projects.map(p => new Date(p.lastUpdated).getTime())));
+            setLastSavedTime(latest.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        }
+    }, [projects]);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -122,6 +133,17 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
             reorderProjects(arrayMove(projects, oldIndex, newIndex));
         }
     }
+
+    const handleClearData = async () => {
+        if (window.confirm('¿Estás seguro de que quieres borrar TODOS los datos y archivos compartidos? Esta acción eliminará los proyectos de este dispositivo y de la nube de forma permanente.')) {
+            setIsClearing(true);
+            await clearData();
+            onSelectProject(null); // Reset selection
+            setIsClearing(false);
+            setClearSuccess(true);
+            setTimeout(() => setClearSuccess(false), 3000);
+        }
+    };
 
     return (
         <div className="flex flex-col h-full bg-card/50 backdrop-blur-xl border-r border-border/40 p-6">
@@ -225,21 +247,46 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
                 </div>
             </div>
 
-            {/* Clear All Data Button - Fixed at bottom of sidebar */}
+            {/* Local Persistence Indicator & Clear All Data Button - Fixed at bottom of sidebar */}
             <div className="pt-4 mt-4 border-t border-border/40">
+                {projects.length > 0 && (
+                    <div className="flex flex-col items-center justify-center gap-1 mb-3 px-2 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                        <div className="flex items-center gap-2">
+                            <div className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-wide">Sincronizado localmente</span>
+                        </div>
+                        <span className="text-[9px] opacity-70">Última actualización: {lastSavedTime}</span>
+                    </div>
+                )}
+                
                 <Button
-                    variant="destructive"
-                    className="w-full shadow-lg shadow-destructive/10"
-                    onClick={() => {
-                        if (window.confirm('¿Estás seguro de que quieres borrar TODOS los datos y archivos compartidos? Esta acción eliminará los proyectos de este dispositivo y de la nube de forma permanente.')) {
-                            clearData();
-                            onSelectProject(null); // Reset selection
-                        }
-                    }}
+                    variant={clearSuccess ? "default" : "destructive"}
+                    className={cn(
+                        "w-full shadow-lg transition-all duration-300",
+                        clearSuccess ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20" : "shadow-destructive/10"
+                    )}
+                    onClick={handleClearData}
+                    disabled={isClearing}
                 >
-                    ELIMINAR TODO
+                    {isClearing ? (
+                        <span className="flex items-center gap-2">
+                            <div className="h-3 w-3 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                            ELIMINANDO...
+                        </span>
+                    ) : clearSuccess ? (
+                        <span className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4" />
+                            ¡DATOS ELIMINADOS!
+                        </span>
+                    ) : (
+                        'ELIMINAR TODO'
+                    )}
                 </Button>
             </div>
         </div>
     );
 }
+
