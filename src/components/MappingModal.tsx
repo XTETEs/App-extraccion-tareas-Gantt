@@ -94,6 +94,18 @@ export function MappingModal() {
                     </div>
 
                     <div className="space-y-2">
+                        <label className="text-sm font-medium">Tipo de Tarea (Opcional)</label>
+                        <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            onChange={(e) => setMapping(prev => ({ ...prev, typeCol: e.target.value }))}
+                            value={mapping.typeCol || ""}
+                        >
+                            <option value="">(Sin asignar)</option>
+                            {rawHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
                         <label className="text-sm font-medium">Presupuesto/Importe (Opcional)</label>
                         <select
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

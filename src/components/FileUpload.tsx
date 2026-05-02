@@ -310,6 +310,19 @@ export function FileUpload() {
                             ? String(obj[industrialHeader]).trim()
                             : undefined;
 
+                        // Priority logic for task type: S > T > P
+                        let taskType = 'P'; // Default a P (Tarea) si no hay columna o no hay coincidencia
+                        if (columnMapping.typeCol && obj[columnMapping.typeCol] !== undefined) {
+                            const rawType = String(obj[columnMapping.typeCol]).toUpperCase();
+                            if (rawType.includes('S')) {
+                                taskType = 'S';
+                            } else if (rawType.includes('T')) {
+                                taskType = 'T';
+                            } else if (rawType.includes('P')) {
+                                taskType = 'P';
+                            }
+                        }
+
                         sheetTasks.push({
                             id: Math.random().toString(36).substr(2, 9),
                             projectId: projectName,
@@ -319,7 +332,7 @@ export function FileUpload() {
                             endDate,
                             isCritical: (columnMapping.criticalCol && !!obj[columnMapping.criticalCol]) || (slack !== undefined && slack <= 0),
                             wbs: wbs ? String(wbs) : undefined,
-                            type: 'T',
+                            type: taskType,
                             delayDays: (progress >= 100) ? 0 : differenceInCalendarDays(new Date(), endDate),
                             totalSlack: slack,
                             progress: progress,
