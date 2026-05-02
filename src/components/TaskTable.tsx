@@ -118,7 +118,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
     return (
         <div className="w-full space-y-4">
             {/* Global Controls & Filters */}
-            {sortedProjectNames.length > 0 && (
+            {tasks.length > 0 && (
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 bg-card/50 p-3 rounded-lg border border-border/50">
                     <div className="flex flex-wrap gap-2">
                         <Button
@@ -146,24 +146,26 @@ export function TaskTable({ tasks }: TaskTableProps) {
                             <span className="mr-1">🔷</span> Solo Tipo S
                         </Button>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleAll(!allCollapsed)}
-                        className="text-muted-foreground hover:text-foreground no-print"
-                    >
-                        {allCollapsed ? (
-                            <>
-                                <ChevronsDown className="h-4 w-4 mr-2" />
-                                Desplegar Todo
-                            </>
-                        ) : (
-                            <>
-                                <ChevronsUp className="h-4 w-4 mr-2" />
-                                Replegar Todo
-                            </>
-                        )}
-                    </Button>
+                    {sortedProjectNames.length > 0 && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleAll(!allCollapsed)}
+                            className="text-muted-foreground hover:text-foreground no-print"
+                        >
+                            {allCollapsed ? (
+                                <>
+                                    <ChevronsDown className="h-4 w-4 mr-2" />
+                                    Desplegar Todo
+                                </>
+                            ) : (
+                                <>
+                                    <ChevronsUp className="h-4 w-4 mr-2" />
+                                    Replegar Todo
+                                </>
+                            )}
+                        </Button>
+                    )}
                 </div>
             )}
 
