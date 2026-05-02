@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AlertTriangle, Calendar, Info, Search, Eye, Printer } from 'lucide-react';
+import { AlertTriangle, Calendar, Info, Search, Eye, Printer, ChevronDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { stringToColor } from '../lib/utils';
 import { Button } from './ui/button';
@@ -13,6 +13,20 @@ const LEFT_COL_PX = 192;
 
 export function BottleneckRadar() {
     const { tasks, projects, radarSelectedTask, setRadarSelectedTask, toggleProjectVisibility } = useStore();
+
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // 1. Extract unique task names for the dropdown (Normalized for selection)
     const uniqueTaskNames = useMemo(() => {
@@ -35,6 +49,12 @@ export function BottleneckRadar() {
         const normalizedSelected = radarSelectedTask.trim().toLowerCase();
         return tasks.filter(t => t.name.trim().toLowerCase() === normalizedSelected);
     }, [tasks, radarSelectedTask]);
+
+    const filteredOptions = useMemo(() => {
+        if (!searchQuery.trim()) return uniqueTaskNames;
+        const lowerQuery = searchQuery.toLowerCase();
+        return uniqueTaskNames.filter(t => t.name.toLowerCase().includes(lowerQuery));
+    }, [uniqueTaskNames, searchQuery]);
 
     // 3. Build the unified time scale — single source of truth for ALL positions
     const scale = useMemo(() => buildTimeScale(relevantTasks), [relevantTasks]);
@@ -85,25 +105,63 @@ export function BottleneckRadar() {
                             <Printer className="h-4 w-4" />
                             Imprimir Radar
                         </Button>
-                        <div className="relative w-full md:w-80">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <select
-                                value={radarSelectedTask}
-                                onChange={(e) => setRadarSelectedTask(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                        <div className="relative w-full md:w-80" ref={dropdownRef}>
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+                            
+                            <div 
+                                className="relative flex items-center w-full bg-background border border-border rounded-xl text-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all cursor-text overflow-hidden"
+                                onClick={() => setIsDropdownOpen(true)}
                             >
-                                <option value="">Selecciona una tarea...</option>
-                                {uniqueTaskNames.map(item => (
-                                    <option 
-                                        key={item.name} 
-                                        value={item.name}
-                                        className={item.isP ? "font-bold text-foreground" : ""}
-                                        style={{ fontWeight: item.isP ? 'bold' : 'normal' }}
-                                    >
-                                        {item.isP ? `[P] ${item.name}` : item.name}
-                                    </option>
-                                ))}
-                            </select>
+                                <input
+                                    type="text"
+                                    className="w-full pl-10 pr-10 py-2 bg-transparent outline-none placeholder:text-muted-foreground/70"
+                                    placeholder={radarSelectedTask || "Selecciona o busca una tarea..."}
+                                    value={isDropdownOpen ? searchQuery : (radarSelectedTask || '')}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setIsDropdownOpen(true);
+                                    }}
+                                    onFocus={() => setIsDropdownOpen(true)}
+                                />
+                                {radarSelectedTask && !isDropdownOpen && (
+                                    <div className="absolute inset-y-0 left-10 right-10 flex items-center pointer-events-none bg-background">
+                                        <span className="truncate block w-full text-foreground">
+                                            {uniqueTaskNames.find(t => t.name === radarSelectedTask)?.isP ? (
+                                                <span className="font-bold">[P] {radarSelectedTask}</span>
+                                            ) : radarSelectedTask}
+                                        </span>
+                                    </div>
+                                )}
+                                <ChevronDown className="absolute right-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            </div>
+
+                            {isDropdownOpen && (
+                                <div className="absolute top-full left-0 right-0 mt-2 max-h-60 overflow-y-auto bg-card border border-border rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-top-2 custom-scrollbar p-1">
+                                    {filteredOptions.length === 0 ? (
+                                        <div className="p-3 text-sm text-center text-muted-foreground">
+                                            No se encontraron tareas
+                                        </div>
+                                    ) : (
+                                        filteredOptions.map(item => (
+                                            <button
+                                                key={item.name}
+                                                className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors ${
+                                                    radarSelectedTask === item.name ? 'bg-primary/10 text-primary font-medium' : 'text-foreground'
+                                                }`}
+                                                onClick={() => {
+                                                    setRadarSelectedTask(item.name);
+                                                    setSearchQuery('');
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                            >
+                                                {item.isP ? (
+                                                    <span className="font-bold text-foreground">[P] {item.name}</span>
+                                                ) : item.name}
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
