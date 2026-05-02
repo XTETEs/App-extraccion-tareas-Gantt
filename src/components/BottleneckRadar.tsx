@@ -17,14 +17,16 @@ export function BottleneckRadar() {
     // 1. Extract unique task names for the dropdown (Normalized for selection)
     const uniqueTaskNames = useMemo(() => {
         // Use a map to keep original casing but group by normalized name
-        const nameMap = new Map<string, string>();
+        const nameMap = new Map<string, { name: string, isP: boolean }>();
         tasks.forEach(t => {
             const normalized = t.name.trim().toLowerCase();
             if (!nameMap.has(normalized)) {
-                nameMap.set(normalized, t.name.trim());
+                nameMap.set(normalized, { name: t.name.trim(), isP: t.type === 'P' });
+            } else if (t.type === 'P') {
+                nameMap.get(normalized)!.isP = true;
             }
         });
-        return Array.from(nameMap.values()).sort((a, b) => a.localeCompare(b));
+        return Array.from(nameMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     }, [tasks]);
 
     // 2. Filter tasks by selected name (Case-insensitive & trimmed matching)
@@ -91,8 +93,15 @@ export function BottleneckRadar() {
                                 className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
                             >
                                 <option value="">Selecciona una tarea...</option>
-                                {uniqueTaskNames.map(name => (
-                                    <option key={name} value={name}>{name}</option>
+                                {uniqueTaskNames.map(item => (
+                                    <option 
+                                        key={item.name} 
+                                        value={item.name}
+                                        className={item.isP ? "font-bold text-foreground" : ""}
+                                        style={{ fontWeight: item.isP ? 'bold' : 'normal' }}
+                                    >
+                                        {item.isP ? `[P] ${item.name}` : item.name}
+                                    </option>
                                 ))}
                             </select>
                         </div>
