@@ -22,9 +22,31 @@ export function TaskTable({ tasks }: TaskTableProps) {
     const { dateRange, projects } = useStore();
     const [collapsedProjects, setCollapsedProjects] = useState<string[]>([]);
 
+    // Filters
+    const [filterDelayed, setFilterDelayed] = useState(false);
+    const [filterCritical, setFilterCritical] = useState(false);
+    const [filterTypeS, setFilterTypeS] = useState(false);
+
+    // Pagination
+    const ITEMS_PER_PAGE = 50;
+    const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
+
+    const getVisibleCount = (project: string) => visibleCounts[project] || ITEMS_PER_PAGE;
+    const loadMore = (project: string) => {
+        setVisibleCounts(prev => ({ ...prev, [project]: getVisibleCount(project) + ITEMS_PER_PAGE }));
+    };
+
+    // Filter Tasks
+    const filteredTasks = tasks.filter(task => {
+        if (filterDelayed && !(task.delayDays && task.delayDays > 0)) return false;
+        if (filterCritical && !(task.totalSlack === 0 || task.isCritical)) return false;
+        if (filterTypeS && task.type !== 'S') return false;
+        return true;
+    });
+
     // 1. Group by Project Name
     const tasksByProject: Record<string, Task[]> = {};
-    tasks.forEach(task => {
+    filteredTasks.forEach(task => {
         const key = task.projectName || 'Sin Proyecto';
         if (!tasksByProject[key]) tasksByProject[key] = [];
         tasksByProject[key].push(task);
@@ -95,9 +117,35 @@ export function TaskTable({ tasks }: TaskTableProps) {
 
     return (
         <div className="w-full space-y-4">
-            {/* Global Controls */}
+            {/* Global Controls & Filters */}
             {sortedProjectNames.length > 0 && (
-                <div className="flex justify-end mb-2">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 bg-card/50 p-3 rounded-lg border border-border/50">
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            variant={filterDelayed ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setFilterDelayed(!filterDelayed)}
+                            className={cn("rounded-full transition-all text-xs h-8", filterDelayed && "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-500/20")}
+                        >
+                            <span className="mr-1">🔴</span> Solo Retrasadas
+                        </Button>
+                        <Button
+                            variant={filterCritical ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setFilterCritical(!filterCritical)}
+                            className={cn("rounded-full transition-all text-xs h-8", filterCritical && "bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-500/20")}
+                        >
+                            <span className="mr-1">⚡</span> Críticas (Holgura 0)
+                        </Button>
+                        <Button
+                            variant={filterTypeS ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setFilterTypeS(!filterTypeS)}
+                            className={cn("rounded-full transition-all text-xs h-8", filterTypeS && "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-500/20")}
+                        >
+                            <span className="mr-1">🔷</span> Solo Tipo S
+                        </Button>
+                    </div>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -167,9 +215,9 @@ export function TaskTable({ tasks }: TaskTableProps) {
                         </div>
 
                         {!isCollapsed && (
-                            <div className="overflow-x-auto animate-in slide-in-from-top-2 duration-200">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-muted/50 text-muted-foreground text-xs font-semibold uppercase tracking-wider backdrop-blur-md">
+                            <div className="overflow-auto max-h-[600px] animate-in slide-in-from-top-2 duration-200">
+                                <table className="w-full text-sm text-left relative">
+                                    <thead className="bg-muted/90 text-muted-foreground text-xs font-semibold uppercase tracking-wider backdrop-blur-md sticky top-0 z-10 shadow-sm">
                                         <tr>
                                             <th className="px-6 py-4 font-bold w-16 text-center">Tipo</th>
                                             <th className="px-6 py-4 font-bold w-24">WBS</th>
@@ -206,7 +254,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/40 bg-card/20">
-                                        {tasksByProject[projectName].map((task, idx) => {
+                                        {tasksByProject[projectName].slice(0, getVisibleCount(projectName)).map((task, idx) => {
                                             const isDelayed = (task.delayDays || 0) > 0;
                                             const delayText = isDelayed ? `+ ${task.delayDays} días` : `${Math.abs(task.delayDays || 0)} días`;
 
@@ -367,6 +415,20 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                         })}
                                     </tbody>
                                     <tfoot className="bg-muted/50 font-bold text-xs uppercase text-muted-foreground border-t border-border/50">
+                                        {tasksByProject[projectName].length > getVisibleCount(projectName) && (
+                                            <tr>
+                                                <td colSpan={9} className="px-6 py-3 text-center bg-card">
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm" 
+                                                        onClick={() => loadMore(projectName)}
+                                                        className="w-full max-w-xs rounded-full hover:bg-muted"
+                                                    >
+                                                        Cargar más tareas ({tasksByProject[projectName].length - getVisibleCount(projectName)} restantes)
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        )}
                                         <tr>
                                             <td colSpan={7} className="px-6 py-4 text-right">
                                                 Total Proyecto:
@@ -407,12 +469,12 @@ export function TaskTable({ tasks }: TaskTableProps) {
                 );
             })}
 
-            {tasks.length === 0 && (
+            {filteredTasks.length === 0 && (
                 <div className="px-6 py-16 text-center text-muted-foreground flex flex-col items-center justify-center gap-2 border border-dashed rounded-xl border-border/50">
                     <div className="h-10 w-10 bg-muted rounded-full flex items-center justify-center text-muted-foreground/50">
                         <Calendar className="h-5 w-5" />
                     </div>
-                    No hay tareas que mostrar en este rango.
+                    {tasks.length === 0 ? "No hay tareas que mostrar en este rango." : "No hay tareas que coincidan con los filtros aplicados."}
                 </div>
             )}
         </div>
