@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { Button } from './ui/button';
 import type { ColumnMapping } from '../types';
+import { cn } from '../lib/utils';
 
 export function MappingModal() {
     const { rawHeaders, setColumnMapping, setMappingModalOpen, isMappingModalOpen } = useStore();
@@ -41,7 +42,7 @@ export function MappingModal() {
             // For V1, we will ask user to re-upload or handle existing file in FileUpload component if we kept it.
             // Better UX: FileUpload keeps the file in a temp state and processes it after this closes.
         } else {
-            alert("Please map all required fields.");
+            alert("Por favor, asigna todas las columnas obligatorias.");
         }
     };
 
@@ -58,9 +59,12 @@ export function MappingModal() {
 
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Nombre de la Tarea (Ej. Columna E)</label>
+                        <label className="text-sm font-medium">Nombre de la Tarea (Ej. Columna E) <span className="text-destructive">*</span></label>
                         <select
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className={cn(
+                                "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors",
+                                mapping.taskCol ? "border-green-500 bg-green-50/10" : "border-destructive/50"
+                            )}
                             onChange={(e) => setMapping(prev => ({ ...prev, taskCol: e.target.value }))}
                             value={mapping.taskCol || ""}
                         >
@@ -70,9 +74,12 @@ export function MappingModal() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Fecha de Inicio (Ej. Columna F)</label>
+                        <label className="text-sm font-medium">Fecha de Inicio (Ej. Columna F) <span className="text-destructive">*</span></label>
                         <select
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className={cn(
+                                "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors",
+                                mapping.startCol ? "border-green-500 bg-green-50/10" : "border-destructive/50"
+                            )}
                             onChange={(e) => setMapping(prev => ({ ...prev, startCol: e.target.value }))}
                             value={mapping.startCol || ""}
                         >
@@ -82,9 +89,12 @@ export function MappingModal() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Fecha de Fin (Ej. Columna G)</label>
+                        <label className="text-sm font-medium">Fecha de Fin (Ej. Columna G) <span className="text-destructive">*</span></label>
                         <select
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className={cn(
+                                "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors",
+                                mapping.endCol ? "border-green-500 bg-green-50/10" : "border-destructive/50"
+                            )}
                             onChange={(e) => setMapping(prev => ({ ...prev, endCol: e.target.value }))}
                             value={mapping.endCol || ""}
                         >
@@ -120,7 +130,13 @@ export function MappingModal() {
                 </div>
 
                 <div className="mt-8 flex justify-end">
-                    <Button onClick={handleSave}>Guardar Configuración</Button>
+                    <Button 
+                        onClick={handleSave}
+                        disabled={!mapping.taskCol || !mapping.startCol || !mapping.endCol}
+                        className={(!mapping.taskCol || !mapping.startCol || !mapping.endCol) ? "opacity-50 cursor-not-allowed" : ""}
+                    >
+                        Guardar Configuración
+                    </Button>
                 </div>
             </div>
         </div>

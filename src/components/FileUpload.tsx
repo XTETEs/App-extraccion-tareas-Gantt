@@ -126,7 +126,7 @@ export function FileUpload() {
 
     const processFile = (file: File, blobUrl?: string) => {
         setSyncStatus('loading');
-        setSyncMessage(`Procesando ${file.name}...`);
+        setSyncMessage(`Extrayendo tareas y calculando estado de ${file.name}...`);
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -451,6 +451,15 @@ export function FileUpload() {
                     {isDragging ? "¡Suelta los archivos aquí!" : "Arrastra archivos aquí o haz clic para seleccionar"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">Soporta .xlsx, .xls, .csv</p>
+                <div className="mt-4" onClick={(e) => e.stopPropagation()}>
+                    <a 
+                        href="data:text/csv;charset=utf-8,TAREA,INICIO,FIN,TIPO,PRESUPUESTO,%25%20AVANCE%0AExcavacion%20y%20cimientos,2024-01-01,2024-01-15,P,10000,100%0AEstructura,2024-01-16,2024-02-15,T,25000,50%0AInstalaciones,2024-02-16,2024-03-01,S,15000,0" 
+                        download="plantilla_gantt.csv"
+                        className="text-sm text-primary hover:underline font-medium flex items-center gap-1 justify-center bg-primary/5 px-3 py-1.5 rounded-full"
+                    >
+                        Descargar plantilla de ejemplo (CSV)
+                    </a>
+                </div>
             </div>
 
             {tasks.length > 0 && (
