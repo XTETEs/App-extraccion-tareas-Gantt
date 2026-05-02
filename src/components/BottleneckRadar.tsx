@@ -83,7 +83,7 @@ export function BottleneckRadar() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header & Selector */}
-            <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-sm">
+            <div className="relative z-50 bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-amber-600 dark:text-amber-400">
