@@ -247,9 +247,10 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                             "px-2 py-1 rounded text-xs font-bold ring-1 ring-inset",
                                                             task.type === 'P' ? "bg-purple-500/10 text-purple-600 ring-purple-500/20" :
                                                                 task.type === 'S' ? "bg-blue-500/10 text-blue-600 ring-blue-500/20" :
-                                                                    "bg-gray-500/10 text-gray-600 ring-gray-500/20"
+                                                                    task.type === 'T' ? "bg-amber-500/10 text-amber-600 ring-amber-500/20" :
+                                                                        "bg-gray-500/10 text-gray-600 ring-gray-500/20"
                                                         )}>
-                                                            [{task.type || 'T'}]
+                                                            [{task.type || 'P'}]
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 font-mono text-xs text-muted-foreground">
