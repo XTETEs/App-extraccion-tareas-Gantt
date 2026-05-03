@@ -169,7 +169,7 @@ export function BottleneckRadar() {
 
             {radarSelectedTask ? (
                 relevantTasks.length > 0 && scale ? (
-                    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col" id="print-area">
+                    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col" id="print-radar-area">
                         {/* Timeline Toolbar */}
                         <div className="p-4 bg-muted/30 border-b border-border/40 flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             <div className="flex items-center gap-2">
@@ -317,14 +317,16 @@ export function BottleneckRadar() {
                                                         <Tooltip delayDuration={100}>
                                                             <TooltipTrigger asChild>
                                                                 <div
-                                                                    className="absolute top-1/2 -translate-y-1/2 h-9 rounded shadow-sm border cursor-pointer transition-all hover:scale-y-105 flex items-center justify-between px-2 overflow-hidden gap-1 z-10"
+                                                                    className="absolute top-[14px] h-9 rounded shadow-sm border cursor-pointer transition-all hover:scale-y-105 flex items-center justify-between px-2 overflow-hidden gap-1 z-10"
                                                                     style={{
                                                                         left: clampedLeft,
                                                                         width: clampedWidth,
                                                                         backgroundColor: projectColor,
                                                                         borderColor: projectColor,
                                                                         color: '#fff',
-                                                                        textShadow: '0px 1px 2px rgba(0,0,0,0.5)'
+                                                                        textShadow: '0px 1px 2px rgba(0,0,0,0.5)',
+                                                                        WebkitPrintColorAdjust: 'exact',
+                                                                        printColorAdjust: 'exact'
                                                                     }}
                                                                 >
                                                                     <span className="text-[10px] font-black opacity-90 shrink-0">S{isoWeek}</span>

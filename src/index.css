@@ -128,7 +128,8 @@
     height: auto !important;
   }
   
-  #print-area {
+  #print-area,
+  #print-radar-area {
     visibility: visible !important;
     overflow: visible !important;
   }
