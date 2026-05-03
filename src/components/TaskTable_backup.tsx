@@ -276,43 +276,29 @@ export function TaskTable({ tasks }: TaskTableProps) {
                             "overflow-auto max-h-[600px] print:max-h-none print:overflow-visible animate-in slide-in-from-top-2 duration-200",
                             isCollapsed ? "hidden print:block" : "block"
                         )}>
-                            <table className="w-full text-sm text-left relative border-collapse [border-spacing:0] [print-color-adjust:exact] [-webkit-print-color-adjust:exact]">
+                            <table className="w-full text-sm text-left relative border-collapse">
                                 <thead className="bg-muted/90 text-muted-foreground text-xs font-semibold uppercase tracking-wider backdrop-blur-md sticky top-0 print:static print:table-header-group z-10 shadow-sm border-b border-border/50">
-                                    <thead>
-                                        <tr className="divide-x divide-border/20">
-                                            <th className="px-4 py-4 font-bold w-16 text-center">Tipo</th>
-                                            <th className="px-4 py-4 font-bold w-24">WBS</th>
+                                        <tr>
+                                            <th className="px-6 py-4 font-bold w-16 text-center">Tipo</th>
+                                            <th className="px-6 py-4 font-bold w-24">WBS</th>
                                             <th className="px-6 py-4 font-bold">Actividad / Tarea</th>
-                                            <th className="px-4 py-4 font-bold w-full min-w-[300px]">
+                                            <th className="px-6 py-4 font-bold w-48">
                                                 <TooltipProvider>
                                                     <Tooltip>
-                                                        <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50 w-full text-left">
+                                                        <TooltipTrigger className="cursor-help border-b border-dotted border-muted-foreground/50">
                                                             Cronograma & Progreso
                                                         </TooltipTrigger>
-                                                        <TooltipContent side="top" className="max-w-xs bg-popover/95 backdrop-blur-sm border-border p-3 shadow-xl">
-                                                            <div className="space-y-2">
-                                                                <p className="font-bold border-b pb-1 text-primary">Guía Visual GANTT</p>
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-4 h-2 bg-primary/20 rounded-sm"></div>
-                                                                    <span>Duración total</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-4 h-2 bg-gradient-to-r from-primary/40 to-primary/70 rounded-sm"></div>
-                                                                    <span>Progreso esperado (hoy)</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-0.5 h-3 bg-red-500 shadow-[0_0_8px_red]"></div>
-                                                                    <span>Marcador de "Hoy"</span>
-                                                                </div>
-                                                                <p className="text-[10px] italic text-muted-foreground pt-1">El relleno indica el avance previsto a fecha de hoy.</p>
-                                                            </div>
+                                                        <TooltipContent side="top" className="max-w-xs">
+                                                            <p>Visualización GANTT: Barra de tarea con progreso esperado (relleno) y línea de "Hoy" (roja).</p>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
                                             </th>
-                                            <th className="px-6 py-4 font-bold text-right w-40">Valoración Periodo</th>
+                                            <th className="px-6 py-4 font-bold">Inicio</th>
+                                            <th className="px-6 py-4 font-bold">Fin</th>
+                                            <th className="px-6 py-4 font-bold text-right w-32">Valoración Periodo</th>
+                                            <th className="px-6 py-4 font-bold text-center">Estado (Días)</th>
                                         </tr>
-                                    </thead>
                                     </thead>
                                     <tbody className="divide-y divide-border/40 bg-card/20">
                                         {tasksByProject[projectName].map((task, idx) => {
@@ -385,22 +371,9 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                         {task.wbs}
                                                     </td>
                                                     <td className="px-6 py-4 font-medium text-foreground relative">
-                                                        <div className="flex flex-col">
-                                                            <span className="leading-tight">{task.name}</span>
-                                                            <div className="flex items-center gap-2 mt-1">
-                                                                <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded border border-border/30 font-mono">
-                                                                    {format(task.startDate, 'dd/MM/yy', { locale: es })} - {format(task.endDate, 'dd/MM/yy', { locale: es })}
-                                                                </span>
-                                                                {isDelayed && (
-                                                                    <span className="text-[9px] font-bold text-red-500 uppercase tracking-tighter flex items-center gap-0.5">
-                                                                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                                                                        Retraso {delayText}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
+                                                        {task.name}
                                                     </td>
-                                                    <td className="px-4 py-4 min-w-[300px]">
+                                                    <td className="px-6 py-4 min-w-[190px]">
                                                         {(() => {
                                                             const rangeStart = (dateRange.from || projectStartDate).getTime();
                                                             const rangeEnd = (dateRange.to || projectEndDate).getTime();
@@ -432,85 +405,49 @@ export function TaskTable({ tasks }: TaskTableProps) {
 
                                                             const isPast = taskEnd < today;
                                                             const isFuture = taskStart > today;
-                                                            
-                                                            const visualLeft = Math.max(-5, Math.min(105, left));
-                                                            const visualWidth = Math.max(1, Math.min(110 - left, width));
+                                                            const barColor = isPast ? 'hsl(var(--muted-foreground))' : 'hsl(var(--primary))';
 
                                                             return (
-                                                                <div className="relative w-full h-10 flex items-center group/gantt">
-                                                                    {/* Full Range Track - subtle background */}
-                                                                    <div className="absolute w-full h-1 bg-muted/20 rounded-full" />
+                                                                <div className="relative w-full h-8 flex items-center group/gantt">
+                                                                    {/* Full Range Track */}
+                                                                    <div className="absolute w-full h-1.5 bg-muted/30 rounded-full" />
                                                                     
-                                                                    {/* Task Duration Bar Container */}
+                                                                    {/* Task Duration Bar */}
                                                                     <div 
                                                                         className={cn(
-                                                                            "absolute h-5 rounded-lg transition-all shadow-md flex items-center overflow-hidden border border-border/30 backdrop-blur-[2px]",
-                                                                            isPast ? "bg-muted/40 border-muted-foreground/20" : "bg-primary/5 border-primary/20",
-                                                                            isFuture && "opacity-60 grayscale-[0.3]",
-                                                                            isDelayed && !isPast && "border-red-500/40 ring-1 ring-red-500/20",
-                                                                            left < 0 && "rounded-l-none border-l-0",
-                                                                            left + width > 100 && "rounded-r-none border-r-0"
+                                                                            "absolute h-3 rounded-sm transition-all shadow-sm flex items-center overflow-hidden",
+                                                                            isPast ? "bg-muted/60" : "bg-primary/20"
                                                                         )}
                                                                         style={{ 
-                                                                            left: `${visualLeft}%`, 
-                                                                            width: `${visualWidth}%`,
-                                                                            maskImage: left < -1 || (left + width > 101) 
-                                                                                ? `linear-gradient(to right, ${left < -1 ? 'transparent' : 'black'} 0%, black 10%, black 90%, ${left + width > 101 ? 'transparent' : 'black'} 100%)` 
-                                                                                : 'none',
-                                                                            WebkitMaskImage: left < -1 || (left + width > 101) 
-                                                                                ? `linear-gradient(to right, ${left < -1 ? 'transparent' : 'black'} 0%, black 10%, black 90%, ${left + width > 101 ? 'transparent' : 'black'} 100%)` 
-                                                                                : 'none',
-                                                                            animationDelay: `${idx * 0.03}s`
+                                                                            left: `${Math.max(0, Math.min(100, left))}%`, 
+                                                                            width: `${Math.max(1, Math.min(100 - left, width))}%`,
+                                                                            opacity: isFuture ? 0.6 : 1
                                                                         }}
+                                                                        title={`Progreso esperado: ${Math.round(expectedPercent)}%`}
                                                                     >
-                                                                        {/* Progress Fill with Gradient */}
+                                                                        {/* Progress Fill */}
                                                                         <div 
-                                                                            className={cn(
-                                                                                "h-full transition-all duration-700 ease-in-out relative animate-fill-progress",
-                                                                                isPast ? "bg-muted-foreground/30" : "bg-gradient-to-r from-primary/40 via-primary/60 to-primary/80",
-                                                                                isDelayed && !isPast && "from-red-500/40 via-red-500/50 to-red-500/60"
-                                                                            )}
-                                                                            style={{ 
-                                                                                width: `${expectedPercent}%`,
-                                                                                animationDelay: `${idx * 0.05}s`
-                                                                            }}
-                                                                        >
-                                                                            {/* Subtle glass effect */}
-                                                                            <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
-                                                                        </div>
-                                                                        
-                                                                        {/* Label inside if wide enough */}
-                                                                        {visualWidth > 12 && (
-                                                                            <span className="absolute right-2 text-[9px] font-black text-foreground/80 pointer-events-none tracking-tighter">
-                                                                                {Math.round(expectedPercent)}%
-                                                                            </span>
-                                                                        )}
+                                                                            className="h-full bg-primary/60 transition-all duration-500"
+                                                                            style={{ width: `${expectedPercent}%` }}
+                                                                        />
                                                                     </div>
-                                                                    
-                                                                    {/* Tooltip Overlay (Invisible trigger) */}
-                                                                    <div className="absolute inset-0 z-10 cursor-help" title={`Progreso esperado: ${Math.round(expectedPercent)}% | Inicio: ${format(task.startDate, 'dd/MM')} | Fin: ${format(task.endDate, 'dd/MM')}`} />
 
-                                                                    {/* Today Marker Line - Pulse effect */}
+                                                                    {/* Today Marker Line */}
                                                                     {showToday && (
                                                                         <div 
-                                                                            className="absolute h-[160%] w-[3px] bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.6)] z-20 pointer-events-none animate-today-pulse"
+                                                                            className="absolute h-full w-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] z-10"
                                                                             style={{ left: `${todayPos}%` }}
                                                                         >
-                                                                            {/* Marker Head */}
-                                                                            <div className="absolute top-0 -translate-x-1/2 -translate-y-full flex flex-col items-center no-print">
-                                                                                <div className="bg-red-600 text-[8px] text-white px-1.5 py-0.5 rounded-sm font-black shadow-lg animate-bounce-slow">
-                                                                                    {format(new Date(), 'dd/MM')}
-                                                                                </div>
-                                                                                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-red-600"></div>
+                                                                            <div className="absolute top-0 -translate-x-1/2 -translate-y-full px-1 py-0.5 bg-red-500 text-[8px] text-white rounded font-bold no-print">
+                                                                                HOY
                                                                             </div>
-                                                                            
-                                                                            {/* Glow trace */}
-                                                                            <div className="absolute inset-0 bg-red-400/20 blur-sm w-[6px] -left-[1.5px]" />
-                                                                            
-                                                                            {/* Line continuation for print */}
-                                                                            <div className="hidden print:block absolute inset-0 bg-red-600 w-[1px]" />
                                                                         </div>
                                                                     )}
+                                                                    
+                                                                    {/* Tooltip text for quick read */}
+                                                                    <div className="absolute -bottom-1 left-0 opacity-0 group-hover/gantt:opacity-100 transition-opacity text-[9px] text-muted-foreground font-mono whitespace-nowrap bg-background/80 backdrop-blur-sm px-1 rounded pointer-events-none">
+                                                                        Progreso: {Math.round(expectedPercent)}%
+                                                                    </div>
                                                                 </div>
                                                             );
                                                         })()}
@@ -554,6 +491,17 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                             return <span className="text-muted-foreground">-</span>;
                                                         })()}
                                                     </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        {isDelayed ? (
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 border border-red-500/20 shadow-sm animate-pulse">
+                                                                🔴 {delayText}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                                                🟢 En fecha
+                                                            </span>
+                                                        )}
+                                                    </td>
                                                 </tr>
                                             )
                                         })}
@@ -574,10 +522,10 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                             </tr>
                                         )}
                                         <tr>
-                                            <td colSpan={3} className="px-6 py-4 text-right">
+                                            <td colSpan={5} className="px-6 py-4 text-right">
                                                 Total Proyecto:
                                             </td>
-                                            <td colSpan={2} className="px-6 py-4 text-right font-mono text-foreground pr-10">
+                                            <td className="px-6 py-4 text-right font-mono text-foreground">
                                                 {(() => {
                                                     if (!dateRange.from || !dateRange.to) {
                                                         const total = projectTasks.reduce((acc, task) => {
@@ -609,6 +557,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
                                                 })()}
                                             </td>
+                                            <td className="px-6 py-4"></td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -625,41 +574,6 @@ export function TaskTable({ tasks }: TaskTableProps) {
                     {tasks.length === 0 ? "No hay tareas que mostrar en este rango." : "No hay tareas que coincidan con los filtros aplicados."}
                 </div>
             )}
-            
-            {/* Styles for Animations */}
-            <style dangerouslySetInnerHTML={{ __html: `
-                @keyframes fill-progress {
-                    from { width: 0; }
-                }
-                .animate-fill-progress {
-                    animation: fill-progress 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-                }
-                @keyframes bounce-slow {
-                    0%, 100% { transform: translateY(0) translateX(-50%); }
-                    50% { transform: translateY(-3px) translateX(-50%); }
-                }
-                .animate-bounce-slow {
-                    animation: bounce-slow 2s ease-in-out infinite;
-                }
-                @keyframes row-reveal {
-                    from { opacity: 0; transform: translateY(15px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes today-pulse {
-                    0%, 100% { opacity: 1; transform: scaleY(1); }
-                    50% { opacity: 0.8; transform: scaleY(1.05); }
-                }
-                .animate-today-pulse {
-                    animation: today-pulse 3s ease-in-out infinite;
-                }
-                tbody tr {
-                    animation: row-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
-                }
-                /* Staggered row animations */
-                ${Array.from({ length: 50 }).map((_, i) => `
-                    tbody tr:nth-child(${i + 1}) { animation-delay: ${i * 0.05}s; }
-                `).join('\n')}
-            `}} />
         </div>
     );
 }
