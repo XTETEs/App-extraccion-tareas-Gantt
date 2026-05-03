@@ -213,10 +213,10 @@ export function BottleneckRadar() {
                                 </div>
 
                                 {/* ── Date Header ── */}
-                                <div className="flex border-b border-border/20 print:border-black/50 bg-muted/5 print:bg-transparent print:w-max">
+                                <div className="relative border-b border-border/20 print:border-black/50 bg-muted/5 print:bg-transparent print:w-max" style={{ height: 44, width: LEFT_COL_PX + scale.totalPx }}>
                                     {/* Name column */}
                                     <div
-                                        className="shrink-0 p-3 bg-muted/10 print:bg-transparent border-r border-border/40 print:border-black/50 font-bold text-[10px] uppercase flex items-end print:text-black"
+                                        className="absolute left-0 top-0 bottom-0 p-3 bg-muted/10 print:bg-transparent border-r border-border/40 print:border-black/50 font-bold text-[10px] uppercase flex items-end print:text-black z-20"
                                         style={{ width: LEFT_COL_PX }}
                                     >
                                         Obra
@@ -224,20 +224,20 @@ export function BottleneckRadar() {
 
                                     {/* Tick area */}
                                     <div
-                                        className="relative shrink-0"
-                                        style={{ width: scale.totalPx, height: 44 }}
+                                        className="absolute top-0 bottom-0"
+                                        style={{ left: LEFT_COL_PX, width: scale.totalPx }}
                                     >
                                         {scale.weekTicks.map(tick => {
                                             const x = scale.toPx(tick.ms);
                                             return (
                                                 <div
                                                     key={tick.ms}
-                                                    className="absolute top-0 h-full flex flex-col justify-end pb-1 select-none"
-                                                    style={{ left: x, width: 68 }}
+                                                    className="absolute top-0 h-full flex flex-col justify-end pb-1 select-none overflow-visible"
+                                                    style={{ left: `${x}px`, width: 120 }}
                                                 >
                                                     <div className="absolute top-0 bottom-0 left-0 border-l border-border/20 print:border-black/30" />
-                                                    <div className="pl-1 text-[9px] text-muted-foreground print:text-black font-bold leading-tight">{tick.label}</div>
-                                                    <div className="pl-1 text-[8px] text-muted-foreground print:text-black opacity-50 leading-tight">{tick.year}</div>
+                                                    <div className="pl-1.5 text-[10px] text-muted-foreground print:text-black font-bold leading-tight whitespace-nowrap">{tick.label}</div>
+                                                    <div className="pl-1.5 text-[9px] text-muted-foreground print:text-black opacity-50 leading-tight whitespace-nowrap">{tick.year}</div>
                                                 </div>
                                             );
                                         })}
@@ -246,10 +246,10 @@ export function BottleneckRadar() {
 
                                 {/* ── Project Rows ── */}
                                 {projectRows.map((row) => (
-                                    <div key={row.name} className="flex border-b border-border/10 print:border-black/20 group hover:bg-muted/10 transition-colors print:break-inside-avoid print:w-max">
+                                    <div key={row.name} className="relative border-b border-border/10 print:border-black/20 group hover:bg-muted/10 transition-colors print:break-inside-avoid print:w-max" style={{ height: 64, width: LEFT_COL_PX + scale.totalPx }}>
                                         {/* Name column */}
                                         <div
-                                            className="shrink-0 p-3 border-r border-border/40 print:border-black/50 flex items-center justify-between gap-1 overflow-hidden transition-colors"
+                                            className="absolute left-0 top-0 bottom-0 p-3 border-r border-border/40 print:border-black/50 flex items-center justify-between gap-1 overflow-hidden transition-colors z-20"
                                             style={{
                                                 width: LEFT_COL_PX,
                                                 backgroundColor: `${stringToColor(row.name)}15`,
@@ -273,8 +273,8 @@ export function BottleneckRadar() {
 
                                         {/* Bar area */}
                                         <div
-                                            className="relative shrink-0"
-                                            style={{ width: scale.totalPx, height: 64 }}
+                                            className="absolute top-0 bottom-0"
+                                            style={{ left: LEFT_COL_PX, width: scale.totalPx }}
                                         >
                                             {/* Vertical grid lines */}
                                             {scale.weekTicks.map(tick => (
@@ -308,8 +308,8 @@ export function BottleneckRadar() {
                                                                 <div
                                                                     className="absolute top-[14px] h-9 rounded shadow-sm border print:border-black/20 cursor-pointer transition-all hover:scale-y-105 flex items-center justify-between px-2 overflow-hidden gap-1 z-10"
                                                                     style={{
-                                                                        left: clampedLeft,
-                                                                        width: clampedWidth,
+                                                                        left: `${clampedLeft}px`,
+                                                                        width: `${clampedWidth}px`,
                                                                         backgroundColor: projectColor,
                                                                         color: '#ffffff',
                                                                         WebkitPrintColorAdjust: 'exact',
