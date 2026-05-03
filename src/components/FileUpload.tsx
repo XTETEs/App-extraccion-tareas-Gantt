@@ -323,6 +323,37 @@ export function FileUpload() {
                             }
                         }
 
+                        let parsedBudget: number | undefined = undefined;
+                        if (columnMapping.budgetCol && obj[columnMapping.budgetCol] !== undefined) {
+                            const rawBudget = obj[columnMapping.budgetCol];
+                            if (typeof rawBudget === 'number') {
+                                parsedBudget = rawBudget;
+                            } else {
+                                let str = String(rawBudget).trim().replace(/[^\d.,-]/g, '');
+                                const lastComma = str.lastIndexOf(',');
+                                const lastDot = str.lastIndexOf('.');
+                                
+                                if (lastComma > -1 && lastDot > -1) {
+                                    if (lastComma > lastDot) {
+                                        str = str.replace(/\./g, '').replace(',', '.');
+                                    } else {
+                                        str = str.replace(/,/g, '');
+                                    }
+                                } else if (lastComma > -1) {
+                                    str = str.replace(',', '.');
+                                } else {
+                                    if (str.split('.').length > 2) {
+                                        str = str.replace(/\./g, '');
+                                    } else if (lastDot > -1 && str.length - lastDot === 4) {
+                                        str = str.replace(/\./g, '');
+                                    }
+                                }
+                                
+                                const parsed = parseFloat(str);
+                                if (!isNaN(parsed)) parsedBudget = parsed;
+                            }
+                        }
+
                         sheetTasks.push({
                             id: Math.random().toString(36).substr(2, 9),
                             projectId: projectName,
@@ -336,7 +367,8 @@ export function FileUpload() {
                             delayDays: (progress >= 100) ? 0 : differenceInCalendarDays(new Date(), endDate),
                             totalSlack: slack,
                             progress: progress,
-                            industrial: industrial || undefined
+                            industrial: industrial || undefined,
+                            budget: parsedBudget
                         });
                     });
 

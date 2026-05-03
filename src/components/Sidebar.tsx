@@ -113,8 +113,11 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
     // Update last saved time when projects change
     useEffect(() => {
         if (projects.length > 0) {
-            const latest = new Date(Math.max(...projects.map(p => new Date(p.lastUpdated).getTime())));
-            setLastSavedTime(latest.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            const validProjects = projects.filter(p => p.lastUpdated);
+            if (validProjects.length > 0) {
+                const latest = new Date(Math.max(...validProjects.map(p => new Date(p.lastUpdated!).getTime())));
+                setLastSavedTime(latest.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            }
         }
     }, [projects]);
 

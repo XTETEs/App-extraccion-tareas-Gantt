@@ -427,7 +427,14 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                     </td>
                                                     <td className="px-6 py-4 text-right font-mono text-xs">
                                                         {(() => {
-                                                            if (!task.budget || !dateRange.from || !dateRange.to) return <span className="text-muted-foreground">-</span>;
+                                                            if (task.budget === undefined) return <span className="text-muted-foreground">-</span>;
+                                                            if (!dateRange.from || !dateRange.to) {
+                                                                return (
+                                                                    <span className="font-medium text-foreground">
+                                                                        {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(task.budget)}
+                                                                    </span>
+                                                                );
+                                                            }
 
                                                             const rangeStart = dateRange.from.getTime();
                                                             const rangeEnd = dateRange.to.getTime();
@@ -493,13 +500,19 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                             </td>
                                             <td className="px-6 py-4 text-right font-mono text-foreground">
                                                 {(() => {
-                                                    if (!dateRange.from || !dateRange.to) return '-';
+                                                    if (!dateRange.from || !dateRange.to) {
+                                                        const total = projectTasks.reduce((acc, task) => {
+                                                            if (task.budget === undefined) return acc;
+                                                            return acc + task.budget;
+                                                        }, 0);
+                                                        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
+                                                    }
 
                                                     const rangeStart = dateRange.from.getTime();
                                                     const rangeEnd = dateRange.to.getTime();
 
                                                     const total = projectTasks.reduce((acc, task) => {
-                                                        if (!task.budget) return acc;
+                                                        if (task.budget === undefined) return acc;
 
                                                         const taskStart = task.startDate.getTime();
                                                         const taskEnd = task.endDate.getTime();
