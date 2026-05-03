@@ -273,7 +273,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
                         </div>
 
                         {!isCollapsed && (
-                            <div className="overflow-auto max-h-[600px] animate-in slide-in-from-top-2 duration-200">
+                            <div className="overflow-auto max-h-[600px] print:max-h-none print:overflow-visible animate-in slide-in-from-top-2 duration-200">
                                 <table className="w-full text-sm text-left relative">
                                     <thead className="bg-muted/90 text-muted-foreground text-xs font-semibold uppercase tracking-wider backdrop-blur-md sticky top-0 z-10 shadow-sm">
                                         <tr>

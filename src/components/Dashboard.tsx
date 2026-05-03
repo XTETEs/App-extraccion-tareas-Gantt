@@ -120,7 +120,7 @@ export function Dashboard() {
             </div>
 
             {/* Main Content - Scrollable */}
-            <div className="flex-1 h-full overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-6 md:space-y-8">
+            <div className="flex-1 h-full print:h-auto overflow-y-auto print:overflow-visible custom-scrollbar p-4 md:p-8 space-y-6 md:space-y-8">
 
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">

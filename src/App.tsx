@@ -15,7 +15,7 @@ function App() {
 
   return (
     <TooltipProvider>
-      <div className="h-screen bg-zinc-50 dark:bg-zinc-950 text-foreground font-sans antialiased overflow-hidden flex flex-col">
+      <div className="h-screen print:h-auto bg-zinc-50 dark:bg-zinc-950 text-foreground font-sans antialiased overflow-hidden print:overflow-visible flex flex-col">
         {/* Header - Minimal & Floating */}
         <header className="h-16 border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-40 flex-none no-print">
           <div className="container h-full mx-auto px-6 flex items-center justify-between">
@@ -33,7 +33,7 @@ function App() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-hidden relative">
+        <main className="flex-1 overflow-hidden print:overflow-visible relative">
           <MappingModal />
 
           {tasks.length === 0 ? (
