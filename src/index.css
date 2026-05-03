@@ -105,42 +105,51 @@
 
   /* Reset layout constraints for multi-page printing */
   html,
-  body,
-  #root,
-  main {
+  body {
     height: auto !important;
     overflow: visible !important;
     position: static !important;
+    background: white !important;
+    color: black !important;
   }
 
-  /* Hide everything by default using display: none for cleaner layout */
-  body > * {
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Hide everything by default, then show specific parts */
+  .no-print,
+  header,
+  nav,
+  .sidebar,
+  button,
+  [role="button"] {
     display: none !important;
   }
 
-  /* Show only the main application container and specifically the print area */
-  #root,
-  #root > *,
-  main {
+  /* Ensure the main container and its ancestors are visible and don't clip */
+  main,
+  .flex-1,
+  .dashboard-container {
     display: block !important;
-    visibility: visible !important;
     overflow: visible !important;
     height: auto !important;
-  }
-  
-  #print-area,
-  #print-radar-area {
-    visibility: visible !important;
-    overflow: visible !important;
+    min-height: 0 !important;
+    position: static !important;
   }
 
-  /* Specific rule for the scrollable list container typically inside Dashboard */
+  /* Specific rule for containers that might clip content */
   .custom-scrollbar,
   .overflow-x-auto,
-  .overflow-y-auto {
+  .overflow-y-auto,
+  .overflow-auto,
+  .overflow-hidden {
     overflow: visible !important;
     height: auto !important;
     max-height: none !important;
+    display: block !important;
   }
 
   /* Force background colors and colors in printing */
@@ -149,37 +158,67 @@
     print-color-adjust: exact !important;
   }
 
-  /* Hide interactive elements and buttons in print */
-  button,
-  .no-print,
-  .no-print * {
-    display: none !important;
-  }
-
   /* Ensure the table takes full width and isn't truncated */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
     table-layout: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+    position: static !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
   }
 
   /* Avoid page breaks inside rows */
   tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  td, th {
     page-break-inside: avoid !important;
   }
 
   /* Clean up shadows/borders for print */
   .rounded-xl,
   .rounded-2xl,
+  .rounded-3xl,
   .shadow-sm,
   .shadow-md,
-  .shadow-lg {
+  .shadow-lg,
+  .shadow-2xl {
     border-radius: 0 !important;
     box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
   }
 
   /* Force contrast for text */
   .text-muted-foreground {
-    color: #666 !important;
+    color: #4b5563 !important;
+  }
+
+  .bg-card\/50,
+  .bg-card\/30,
+  .bg-card\/20,
+  .bg-muted\/90,
+  .bg-muted\/50,
+  .bg-muted\/40,
+  .bg-muted\/30,
+  .bg-muted\/10 {
+    background-color: transparent !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* Ensure the specific print area is visible */
+  #print-area {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
   }
 }

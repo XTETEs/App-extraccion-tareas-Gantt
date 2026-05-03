@@ -75,7 +75,7 @@ export function Dashboard() {
     }).filter(d => d.total > 0);
 
     return (
-        <div className="flex h-full overflow-hidden bg-background relative">
+        <div className="flex h-full print:h-auto overflow-hidden print:overflow-visible bg-background relative">
 
             {/* Sidebar - Desktop */}
             <div className="w-72 hidden lg:block h-full shrink-0 no-print">
@@ -120,7 +120,7 @@ export function Dashboard() {
             </div>
 
             {/* Main Content - Scrollable */}
-            <div className="flex-1 h-full print:h-auto overflow-y-auto print:overflow-visible custom-scrollbar p-4 md:p-8 space-y-6 md:space-y-8">
+            <div className="flex-1 h-full overflow-y-auto print:h-auto print:overflow-visible custom-scrollbar p-4 md:p-8 space-y-6 md:space-y-8">
 
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">

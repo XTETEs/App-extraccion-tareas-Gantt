@@ -55,7 +55,7 @@ function App() {
               </div>
             </div>
           ) : (
-            <div className="h-full animate-in fade-in duration-500">
+            <div className="h-full print:h-auto print:overflow-visible animate-in fade-in duration-500">
               <Dashboard />
             </div>
           )}

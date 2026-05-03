@@ -272,10 +272,12 @@ export function TaskTable({ tasks }: TaskTableProps) {
                             </span>
                         </div>
 
-                        {!isCollapsed && (
-                            <div className="overflow-auto max-h-[600px] print:max-h-none print:overflow-visible animate-in slide-in-from-top-2 duration-200">
-                                <table className="w-full text-sm text-left relative">
-                                    <thead className="bg-muted/90 text-muted-foreground text-xs font-semibold uppercase tracking-wider backdrop-blur-md sticky top-0 z-10 shadow-sm">
+                        <div className={cn(
+                            "overflow-auto max-h-[600px] print:max-h-none print:overflow-visible animate-in slide-in-from-top-2 duration-200",
+                            isCollapsed ? "hidden print:block" : "block"
+                        )}>
+                            <table className="w-full text-sm text-left relative border-collapse">
+                                <thead className="bg-muted/90 text-muted-foreground text-xs font-semibold uppercase tracking-wider backdrop-blur-md sticky top-0 print:static print:table-header-group z-10 shadow-sm border-b border-border/50">
                                         <tr>
                                             <th className="px-6 py-4 font-bold w-16 text-center">Tipo</th>
                                             <th className="px-6 py-4 font-bold w-24">WBS</th>
@@ -312,7 +314,8 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border/40 bg-card/20">
-                                        {tasksByProject[projectName].slice(0, getVisibleCount(projectName)).map((task, idx) => {
+                                        {tasksByProject[projectName].map((task, idx) => {
+                                            const isVisible = idx < getVisibleCount(projectName);
                                             const isDelayed = (task.delayDays || 0) > 0;
                                             const delayText = isDelayed ? `+ ${task.delayDays} días` : `${Math.abs(task.delayDays || 0)} días`;
 
@@ -341,12 +344,30 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                         showBar = true;
                                                     }
                                                 }
+                                            } else {
+                                                // Fallback: show task relative to its project dates if no global range
+                                                const rangeStart = projectStartDate.getTime();
+                                                const rangeEnd = projectEndDate.getTime();
+                                                const totalRangeMs = rangeEnd - rangeStart;
+                                                
+                                                if (totalRangeMs > 0) {
+                                                    const taskStart = task.startDate.getTime();
+                                                    const taskEnd = task.endDate.getTime();
+                                                    const durationMs = taskEnd - taskStart;
+                                                    
+                                                    progressPercent = (durationMs / totalRangeMs) * 100;
+                                                    progressLeft = ((taskStart - rangeStart) / totalRangeMs) * 100;
+                                                    showBar = true;
+                                                }
                                             }
 
                                             return (
                                                 <tr
                                                     key={task.id + idx}
-                                                    className="hover:bg-muted/30 transition-colors group"
+                                                    className={cn(
+                                                        "hover:bg-muted/30 transition-colors group",
+                                                        !isVisible && "hidden print:table-row"
+                                                    )}
                                                 >
                                                     <td className="px-6 py-4 text-center">
                                                         <span className={cn(
@@ -388,9 +409,8 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                     </td>
                                                     <td className="px-6 py-4 text-center">
                                                         {(() => {
-                                                            if (!dateRange.to) return <span className="text-xs text-muted-foreground">-</span>;
-
-                                                            const targetDate = dateRange.to;
+                                                            // Fallback to today if no date range target
+                                                            const targetDate = dateRange.to || new Date();
                                                             const start = task.startDate;
                                                             const end = task.endDate;
 
@@ -481,7 +501,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                     </tbody>
                                     <tfoot className="bg-muted/50 font-bold text-xs uppercase text-muted-foreground border-t border-border/50">
                                         {tasksByProject[projectName].length > getVisibleCount(projectName) && (
-                                            <tr>
+                                            <tr className="no-print">
                                                 <td colSpan={9} className="px-6 py-3 text-center bg-card">
                                                     <Button 
                                                         variant="outline" 
@@ -535,8 +555,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                     </tfoot>
                                 </table>
                             </div>
-                        )}
-                    </div>
+                        </div>
                 );
             })}
 
