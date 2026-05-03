@@ -169,7 +169,7 @@ export function BottleneckRadar() {
 
             {radarSelectedTask ? (
                 relevantTasks.length > 0 && scale ? (
-                    <div className="bg-card/50 backdrop-blur-sm print:bg-white print:backdrop-blur-none border border-border/50 print:border-none rounded-2xl overflow-hidden print:overflow-visible shadow-sm print:shadow-none flex flex-col print:block" id="print-radar-area">
+                    <div className="bg-card/50 backdrop-blur-sm print:bg-white print:backdrop-blur-none border border-border/50 print:border-none rounded-2xl overflow-hidden print:overflow-visible shadow-sm print:shadow-none flex flex-col print:block print:w-max min-w-full" id="print-radar-area">
                         {/* Timeline Toolbar */}
                         <div className="p-4 bg-muted/30 print:bg-transparent border-b border-border/40 print:border-b-2 print:border-black flex items-center justify-between text-xs font-semibold text-muted-foreground print:text-black uppercase tracking-wider">
                             <div className="flex items-center gap-2">
@@ -200,8 +200,8 @@ export function BottleneckRadar() {
                         </div>
 
                         {/* ── Timeline Grid ────────────────────────────────────────────────────── */}
-                        <div className="overflow-x-auto custom-scrollbar print:overflow-visible">
-                            <div style={{ width: LEFT_COL_PX + scale.totalPx }} className="relative print:w-full">
+                        <div className="overflow-x-auto custom-scrollbar print:overflow-visible print:w-max">
+                            <div style={{ width: LEFT_COL_PX + scale.totalPx }} className="relative print:w-max">
                                 <div className="absolute top-0 bottom-0 pointer-events-none z-[5]" style={{ left: LEFT_COL_PX, width: scale.totalPx }}>
                                     {Array.from(new Set(relevantTasks.map(t => toUtcDay(t.startDate)))).map(startMs => (
                                         <div
@@ -213,7 +213,7 @@ export function BottleneckRadar() {
                                 </div>
 
                                 {/* ── Date Header ── */}
-                                <div className="flex border-b border-border/20 print:border-black/50 bg-muted/5 print:bg-transparent">
+                                <div className="flex border-b border-border/20 print:border-black/50 bg-muted/5 print:bg-transparent print:w-max">
                                     {/* Name column */}
                                     <div
                                         className="shrink-0 p-3 bg-muted/10 print:bg-transparent border-r border-border/40 print:border-black/50 font-bold text-[10px] uppercase flex items-end print:text-black"
@@ -224,7 +224,7 @@ export function BottleneckRadar() {
 
                                     {/* Tick area */}
                                     <div
-                                        className="relative"
+                                        className="relative shrink-0"
                                         style={{ width: scale.totalPx, height: 44 }}
                                     >
                                         {scale.weekTicks.map(tick => {
@@ -246,7 +246,7 @@ export function BottleneckRadar() {
 
                                 {/* ── Project Rows ── */}
                                 {projectRows.map((row) => (
-                                    <div key={row.name} className="flex border-b border-border/10 print:border-black/20 group hover:bg-muted/10 transition-colors print:break-inside-avoid">
+                                    <div key={row.name} className="flex border-b border-border/10 print:border-black/20 group hover:bg-muted/10 transition-colors print:break-inside-avoid print:w-max">
                                         {/* Name column */}
                                         <div
                                             className="shrink-0 p-3 border-r border-border/40 print:border-black/50 flex items-center justify-between gap-1 overflow-hidden transition-colors"
@@ -273,7 +273,7 @@ export function BottleneckRadar() {
 
                                         {/* Bar area */}
                                         <div
-                                            className="relative"
+                                            className="relative shrink-0"
                                             style={{ width: scale.totalPx, height: 64 }}
                                         >
                                             {/* Vertical grid lines */}
