@@ -306,47 +306,6 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                             const isDelayed = (task.delayDays || 0) > 0;
                                             const delayText = isDelayed ? `+ ${task.delayDays} días` : `${Math.abs(task.delayDays || 0)} días`;
 
-                                            // Progress Bar Logic
-                                            let progressPercent = 0;
-                                            let progressLeft = 0;
-                                            let showBar = false;
-
-                                            if (dateRange.from && dateRange.to) {
-                                                const rangeStart = dateRange.from.getTime();
-                                                const rangeEnd = dateRange.to.getTime();
-                                                const totalRangeMs = rangeEnd - rangeStart;
-
-                                                if (totalRangeMs > 0) {
-                                                    const taskStart = task.startDate.getTime();
-                                                    const taskEnd = task.endDate.getTime();
-
-                                                    // Intersection
-                                                    const start = Math.max(rangeStart, taskStart);
-                                                    const end = Math.min(rangeEnd, taskEnd);
-
-                                                    if (end >= start) {
-                                                        const durationMs = end - start;
-                                                        progressPercent = (durationMs / totalRangeMs) * 100;
-                                                        progressLeft = ((start - rangeStart) / totalRangeMs) * 100;
-                                                        showBar = true;
-                                                    }
-                                                }
-                                            } else {
-                                                // Fallback: show task relative to its project dates if no global range
-                                                const rangeStart = projectStartDate.getTime();
-                                                const rangeEnd = projectEndDate.getTime();
-                                                const totalRangeMs = rangeEnd - rangeStart;
-                                                
-                                                if (totalRangeMs > 0) {
-                                                    const taskStart = task.startDate.getTime();
-                                                    const taskEnd = task.endDate.getTime();
-                                                    const durationMs = taskEnd - taskStart;
-                                                    
-                                                    progressPercent = (durationMs / totalRangeMs) * 100;
-                                                    progressLeft = ((taskStart - rangeStart) / totalRangeMs) * 100;
-                                                    showBar = true;
-                                                }
-                                            }
 
                                             return (
                                                 <tr
@@ -405,7 +364,6 @@ export function TaskTable({ tasks }: TaskTableProps) {
 
                                                             const isPast = taskEnd < today;
                                                             const isFuture = taskStart > today;
-                                                            const barColor = isPast ? 'hsl(var(--muted-foreground))' : 'hsl(var(--primary))';
 
                                                             return (
                                                                 <div className="relative w-full h-8 flex items-center group/gantt">
