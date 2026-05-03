@@ -121,14 +121,16 @@
   /* Show only the main application container and specifically the print area */
   #root,
   #root > *,
-  main,
-  #print-area,
-  #print-area * {
+  main {
     display: block !important;
     visibility: visible !important;
     overflow: visible !important;
-    position: static !important;
     height: auto !important;
+  }
+  
+  #print-area {
+    visibility: visible !important;
+    overflow: visible !important;
   }
 
   /* Specific rule for the scrollable list container typically inside Dashboard */
