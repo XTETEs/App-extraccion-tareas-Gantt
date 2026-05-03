@@ -169,9 +169,9 @@ export function BottleneckRadar() {
 
             {radarSelectedTask ? (
                 relevantTasks.length > 0 && scale ? (
-                    <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl overflow-hidden shadow-sm flex flex-col" id="print-radar-area">
+                    <div className="bg-card/50 backdrop-blur-sm print:bg-white print:backdrop-blur-none border border-border/50 print:border-none rounded-2xl overflow-hidden print:overflow-visible shadow-sm print:shadow-none flex flex-col print:block" id="print-radar-area">
                         {/* Timeline Toolbar */}
-                        <div className="p-4 bg-muted/30 border-b border-border/40 flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        <div className="p-4 bg-muted/30 print:bg-transparent border-b border-border/40 print:border-b-2 print:border-black flex items-center justify-between text-xs font-semibold text-muted-foreground print:text-black uppercase tracking-wider">
                             <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4" />
                                 <span>
@@ -183,13 +183,13 @@ export function BottleneckRadar() {
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-1.5">
-                                    <div className="w-3 h-3 rounded-sm bg-primary" />
+                                    <div className="w-3 h-3 rounded-sm bg-primary print:bg-black" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }} />
                                     <span>Programado</span>
                                 </div>
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <Info className="h-4 w-4 cursor-help" />
+                                            <Info className="h-4 w-4 cursor-help no-print" />
                                         </TooltipTrigger>
                                         <TooltipContent>
                                             <p className="max-w-xs">Las barras muestran el intervalo desde el inicio hasta el fin de la tarea en cada obra. Los solapes verticales indican posibles saturación de recursos.</p>
@@ -199,37 +199,30 @@ export function BottleneckRadar() {
                             </div>
                         </div>
 
-                        {/* ── Timeline Grid ──────────────────────────────────────────────────────
-                            ARCHITECTURE:
-                            • The scrollable container holds ONE fixed-width div (LEFT_COL_PX + scale.totalPx).
-                            • Both the week-tick header AND every task row use this same explicit px width.
-                            • Tick marks and bar positions are computed via the SAME formula:
-                                X_px = (T_target - T_start) / T_total × totalPx
-                            • This guarantees mathematical alignment — no flex-min-width drift possible.
-                        ─────────────────────────────────────────────────────────────────────── */}
-                        <div className="overflow-x-auto custom-scrollbar">
-                            <div style={{ width: LEFT_COL_PX + scale.totalPx }} className="relative">
+                        {/* ── Timeline Grid ────────────────────────────────────────────────────── */}
+                        <div className="overflow-x-auto custom-scrollbar print:overflow-visible">
+                            <div style={{ width: LEFT_COL_PX + scale.totalPx }} className="relative print:w-full">
                                 <div className="absolute top-0 bottom-0 pointer-events-none z-[5]" style={{ left: LEFT_COL_PX, width: scale.totalPx }}>
                                     {Array.from(new Set(relevantTasks.map(t => toUtcDay(t.startDate)))).map(startMs => (
                                         <div
                                             key={startMs}
-                                            className="absolute top-0 bottom-0 border-l border-primary/20 shadow-[0_0_1px_rgba(255,255,255,0.3)]"
+                                            className="absolute top-0 bottom-0 border-l border-primary/20 print:border-black/20"
                                             style={{ left: scale.toPx(startMs) }}
                                         />
                                     ))}
                                 </div>
 
                                 {/* ── Date Header ── */}
-                                <div className="flex border-b border-border/20 bg-muted/5">
+                                <div className="flex border-b border-border/20 print:border-black/50 bg-muted/5 print:bg-transparent">
                                     {/* Name column */}
                                     <div
-                                        className="shrink-0 p-3 bg-muted/10 border-r border-border/40 font-bold text-[10px] uppercase flex items-end"
+                                        className="shrink-0 p-3 bg-muted/10 print:bg-transparent border-r border-border/40 print:border-black/50 font-bold text-[10px] uppercase flex items-end print:text-black"
                                         style={{ width: LEFT_COL_PX }}
                                     >
                                         Obra
                                     </div>
 
-                                    {/* Tick area — same explicit width as bar areas below */}
+                                    {/* Tick area */}
                                     <div
                                         className="relative"
                                         style={{ width: scale.totalPx, height: 44 }}
@@ -242,10 +235,9 @@ export function BottleneckRadar() {
                                                     className="absolute top-0 h-full flex flex-col justify-end pb-1 select-none"
                                                     style={{ left: x, width: 68 }}
                                                 >
-                                                    {/* Vertical separator */}
-                                                    <div className="absolute top-0 bottom-0 left-0 border-l border-border/20" />
-                                                    <div className="pl-1 text-[9px] text-muted-foreground font-bold leading-tight">{tick.label}</div>
-                                                    <div className="pl-1 text-[8px] text-muted-foreground opacity-50 leading-tight">{tick.year}</div>
+                                                    <div className="absolute top-0 bottom-0 left-0 border-l border-border/20 print:border-black/30" />
+                                                    <div className="pl-1 text-[9px] text-muted-foreground print:text-black font-bold leading-tight">{tick.label}</div>
+                                                    <div className="pl-1 text-[8px] text-muted-foreground print:text-black opacity-50 leading-tight">{tick.year}</div>
                                                 </div>
                                             );
                                         })}
@@ -254,57 +246,54 @@ export function BottleneckRadar() {
 
                                 {/* ── Project Rows ── */}
                                 {projectRows.map((row) => (
-                                    <div key={row.name} className="flex border-b border-border/10 group hover:bg-muted/10 transition-colors">
+                                    <div key={row.name} className="flex border-b border-border/10 print:border-black/20 group hover:bg-muted/10 transition-colors print:break-inside-avoid">
                                         {/* Name column */}
                                         <div
-                                            className="shrink-0 p-3 border-r border-border/40 flex items-center justify-between gap-1 overflow-hidden transition-colors"
+                                            className="shrink-0 p-3 border-r border-border/40 print:border-black/50 flex items-center justify-between gap-1 overflow-hidden transition-colors"
                                             style={{
                                                 width: LEFT_COL_PX,
                                                 backgroundColor: `${stringToColor(row.name)}15`,
-                                                borderLeft: `4px solid ${stringToColor(row.name)}`
+                                                borderLeft: `4px solid ${stringToColor(row.name)}`,
+                                                WebkitPrintColorAdjust: 'exact',
+                                                printColorAdjust: 'exact'
                                             }}
                                         >
                                             <div className="flex items-center gap-2 overflow-hidden">
-                                                <div className="h-2.5 w-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: stringToColor(row.name) }} />
-                                                <span className="text-xs font-bold truncate" title={row.name}>{row.name}</span>
+                                                <div className="h-2.5 w-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: stringToColor(row.name), WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }} />
+                                                <span className="text-xs font-bold truncate print:text-black print:whitespace-normal" title={row.name}>{row.name}</span>
                                             </div>
                                             <button
                                                 onClick={() => toggleProjectVisibility(row.name)}
-                                                className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-foreground shrink-0"
+                                                className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-foreground shrink-0 no-print"
                                                 title="Ocultar obra"
                                             >
                                                 <Eye className="h-3.5 w-3.5" />
                                             </button>
                                         </div>
 
-                                        {/* Bar area — exact same width as tick area in header */}
+                                        {/* Bar area */}
                                         <div
                                             className="relative"
                                             style={{ width: scale.totalPx, height: 64 }}
                                         >
-                                            {/* Vertical grid lines — SAME toPx() as header ticks */}
+                                            {/* Vertical grid lines */}
                                             {scale.weekTicks.map(tick => (
                                                 <div
                                                     key={tick.ms}
-                                                    className="absolute top-0 bottom-0 border-l border-border/5"
+                                                    className="absolute top-0 bottom-0 border-l border-border/5 print:border-black/10"
                                                     style={{ left: scale.toPx(tick.ms) }}
                                                 />
                                             ))}
 
-                                            {/* Task bars
-                                                X_px = toPx(taskStartMs)
-                                                W_px = toPx(taskEndMs + MS_DAY) – X_px  (inclusive of end day)
-                                            */}
+                                            {/* Task bars */}
                                             {row.tasks.map((task) => {
                                                 const taskStartMs = toUtcDay(task.startDate);
                                                 const taskEndMs = toUtcDay(task.endDate);
                                                 const MS_DAY = 86_400_000;
 
                                                 const leftPx = scale.toPx(taskStartMs);
-                                                // Width represents inclusive duration (end day counts fully)
                                                 const widthPx = scale.toPx(taskEndMs + MS_DAY) - leftPx;
 
-                                                // Clamp to visible area
                                                 const clampedLeft = Math.max(0, leftPx);
                                                 const clampedWidth = Math.max(2, Math.min(scale.totalPx - clampedLeft, widthPx));
 
@@ -317,14 +306,12 @@ export function BottleneckRadar() {
                                                         <Tooltip delayDuration={100}>
                                                             <TooltipTrigger asChild>
                                                                 <div
-                                                                    className="absolute top-[14px] h-9 rounded shadow-sm border cursor-pointer transition-all hover:scale-y-105 flex items-center justify-between px-2 overflow-hidden gap-1 z-10"
+                                                                    className="absolute top-[14px] h-9 rounded shadow-sm border print:border-black/20 cursor-pointer transition-all hover:scale-y-105 flex items-center justify-between px-2 overflow-hidden gap-1 z-10"
                                                                     style={{
                                                                         left: clampedLeft,
                                                                         width: clampedWidth,
                                                                         backgroundColor: projectColor,
-                                                                        borderColor: projectColor,
-                                                                        color: '#fff',
-                                                                        textShadow: '0px 1px 2px rgba(0,0,0,0.5)',
+                                                                        color: '#ffffff',
                                                                         WebkitPrintColorAdjust: 'exact',
                                                                         printColorAdjust: 'exact'
                                                                     }}
@@ -338,7 +325,7 @@ export function BottleneckRadar() {
                                                                     <span className="text-[10px] font-bold truncate shrink-0">{durationDays}d</span>
                                                                 </div>
                                                             </TooltipTrigger>
-                                                            <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100]">
+                                                            <TooltipContent side="top" className="bg-popover border-border animate-in zoom-in-95 duration-150 z-[100] no-print">
                                                                 <div className="space-y-1">
                                                                     <p className="font-bold text-sm">{row.name}</p>
                                                                     <p className="text-xs text-muted-foreground">
@@ -362,7 +349,7 @@ export function BottleneckRadar() {
                         </div>
 
                         {/* Summary Footer */}
-                        <div className="p-4 bg-muted/20 border-t border-border/40 text-[11px] text-muted-foreground flex justify-between">
+                        <div className="p-4 bg-muted/20 print:bg-transparent border-t border-border/40 print:border-black/50 text-[11px] text-muted-foreground print:text-black flex justify-between">
                             <span>Total de obras involucradas: {projectRows.length}</span>
                             <span className="italic">Visualización basada en la duración total de la partida por obra</span>
                         </div>
