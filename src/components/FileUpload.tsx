@@ -49,7 +49,6 @@ export function FileUpload() {
 
     // Fetch and load remote files on mount
     useEffect(() => {
-        console.log('[FileUpload] useEffect ejecutándose - iniciando carga remota');
         const loadRemoteFiles = async () => {
             console.log('[FileUpload] loadRemoteFiles iniciado');
             setSyncStatus('loading');
