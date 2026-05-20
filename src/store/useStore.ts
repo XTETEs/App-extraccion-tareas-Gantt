@@ -74,7 +74,14 @@ export const useStore = create<AppState>((set) => ({
     },
 
     addTasks: async (newTasks, projectDates) => {
-        const uniqueProjectNames = Array.from(new Set(newTasks.map(t => t.projectName)));
+        const uniqueProjectNames: string[] = [];
+        const seenProjects = new Set<string>();
+        for (const task of newTasks) {
+            if (!seenProjects.has(task.projectName)) {
+                seenProjects.add(task.projectName);
+                uniqueProjectNames.push(task.projectName);
+            }
+        }
 
         // 1. Clean up existing tasks for these projects to prevent duplicates (Snapshot logic)
         await db.tasks.where('projectName').anyOf(uniqueProjectNames).delete();
