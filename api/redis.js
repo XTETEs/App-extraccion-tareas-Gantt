@@ -7,6 +7,10 @@ const redis = new Redis({
 });
 
 export default async function handler(request, response) {
+    if (!process.env.AUTH_TOKEN || request.headers.authorization !== `Bearer ${process.env.AUTH_TOKEN}`) {
+        return response.status(401).json({ error: 'Unauthorized' });
+    }
+
     try {
         const result = await redis.get("item");
         return response.status(200).json({ result });

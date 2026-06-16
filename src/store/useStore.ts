@@ -257,6 +257,9 @@ export const useStore = create<AppState>((set) => ({
             console.log('[Store] Calling clear-files API');
             const response = await fetch('/api/clear-files', {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${import.meta.env.VITE_API_AUTH_TOKEN}`
+                }
             });
             if (!response.ok) {
                 throw new Error('Failed to clear remote files');
@@ -280,7 +283,10 @@ export const useStore = create<AppState>((set) => ({
                     .map(p =>
                         fetch('/api/delete-file', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${import.meta.env.VITE_API_AUTH_TOKEN}`
+                            },
                             body: JSON.stringify({ url: p.blobUrl }),
                         }).then(async res => {
                             if (!res.ok) throw new Error(`Server returned ${res.status}`);

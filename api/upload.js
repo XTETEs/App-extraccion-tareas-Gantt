@@ -8,6 +8,10 @@ const redis = new Redis({
 });
 
 export default async function handler(request, response) {
+  if (!process.env.AUTH_TOKEN || request.headers.authorization !== `Bearer ${process.env.AUTH_TOKEN}`) {
+    return response.status(401).json({ error: 'Unauthorized' });
+  }
+
   try {
     // Vercel puede pasar request.url como path relativo o URL completa
     // Construimos una URL completa si es necesario

@@ -25,6 +25,9 @@ export function FileUpload() {
         try {
             const response = await fetch(`/api/upload?filename=${file.name}`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${import.meta.env.VITE_API_AUTH_TOKEN}`
+                },
                 body: file,
             });
             const newBlob = await response.json();
@@ -56,7 +59,11 @@ export function FileUpload() {
             setSyncMessage('Buscando archivos compartidos...');
             try {
                 console.log('[FileUpload] Llamando a /api/list-gantt');
-                const res = await fetch('/api/list-gantt');
+                const res = await fetch('/api/list-gantt', {
+                    headers: {
+                        'Authorization': `Bearer ${import.meta.env.VITE_API_AUTH_TOKEN}`
+                    }
+                });
                 console.log('[FileUpload] Respuesta recibida:', res.status, res.statusText);
                 if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
 
