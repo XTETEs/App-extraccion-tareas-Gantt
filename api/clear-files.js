@@ -12,6 +12,17 @@ export default async function handler(request, response) {
         return response.status(405).json({ error: 'Method not allowed' });
     }
 
+    // Authorization check
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return response.status(401).json({ error: 'Unauthorized: Missing or invalid token format' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    if (token !== process.env.AUTH_TOKEN) {
+        return response.status(401).json({ error: 'Unauthorized: Invalid token' });
+    }
+
     try {
         console.log('[clear-files] Starting deletion process');
 
