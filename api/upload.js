@@ -37,8 +37,7 @@ export default async function handler(request, response) {
   } catch (error) {
     console.error('[upload] Error:', error);
     return response.status(500).json({
-      error: error.message || 'Upload failed',
-      details: error.toString()
+      error: 'Upload failed'
     });
   }
 }
