@@ -19,70 +19,57 @@ export function getLeafTasks(allTasks: any[]) {
     // 1. Deduplicate by Priority (S > T > P)
     const distinctTasks = deduplicateByWbs(allTasks);
 
-    // 2. Sort by WBS (Lexical) to ensure Hierarchy
-    const sorted = [...distinctTasks].sort((a, b) => {
-        if (a.projectName !== b.projectName) return a.projectName.localeCompare(b.projectName);
-        const wbsA = a.wbs ? a.wbs.toString().trim() : '';
-        const wbsB = b.wbs ? b.wbs.toString().trim() : '';
-        return wbsA.localeCompare(wbsB);
+    // Group by project to process each obra independently
+    const tasksByProject = new Map<string, any[]>();
+    distinctTasks.forEach(t => {
+        const list = tasksByProject.get(t.projectName) || [];
+        list.push(t);
+        tasksByProject.set(t.projectName, list);
     });
 
     const leafTasks: any[] = [];
 
-    for (let i = 0; i < sorted.length; i++) {
-        const current = sorted[i];
+    tasksByProject.forEach(projectTasks => {
+        const hasExplicitLeafTypes = projectTasks.some(t => t.type === 'T' || t.type === 'S');
+        const wbsSet = new Set(
+            projectTasks
+                .map(t => (t.wbs ? t.wbs.toString().trim() : ''))
+                .filter(Boolean)
+        );
 
-        // Special case: If no WBS, treat as leaf (fallback)
-        if (!current.wbs) {
-            leafTasks.push(current);
-            continue;
-        }
+        projectTasks.forEach(current => {
+            const currWbs = current.wbs ? current.wbs.toString().trim() : '';
 
-        // Logic: Treat 'S' (Subcontrata) as Atomic Leaf
-        // If current is 'S', we add it, and SKIP any subsequent tasks that are children of it.
-        if (current.type === 'S') {
-            leafTasks.push(current);
+            // Check if any other task has current task as a hierarchical parent via separator (., -, /)
+            const hasChildrenByWbs = currWbs !== '' && Array.from(wbsSet).some(otherWbs =>
+                otherWbs !== currWbs && (
+                    otherWbs.startsWith(currWbs + '.') ||
+                    otherWbs.startsWith(currWbs + '-') ||
+                    otherWbs.startsWith(currWbs + '/') ||
+                    otherWbs.startsWith(currWbs + ' ')
+                )
+            );
 
-            // Fast-forward loop to skip children
-            let j = i + 1;
-            while (j < sorted.length) {
-                const nextCandidate = sorted[j];
-                if (nextCandidate.projectName !== current.projectName || !nextCandidate.wbs) break;
-
-                const currWbs = current.wbs.toString().trim();
-                const nextWbs = nextCandidate.wbs.toString().trim();
-
-                // Check if child
-                const isChild = nextWbs.startsWith(currWbs + '.') ||
-                    nextWbs.startsWith(currWbs + '-') ||
-                    (nextWbs.startsWith(currWbs) && nextWbs.length > currWbs.length);
-
-                if (!isChild) break;
-                j++;
+            // If another task is an explicit child in the WBS tree, this task is a parent
+            if (hasChildrenByWbs) {
+                return;
             }
-            // Update main loop index (minus 1 because for-loop does i++)
-            i = j - 1;
-            continue;
-        }
 
-        const next = sorted[i + 1];
-        let isParent = false;
-
-        // Check if current WBS is parent of next
-        if (next && next.projectName === current.projectName && next.wbs) {
-            const currWbs = current.wbs.toString().trim();
-            const nextWbs = next.wbs.toString().trim();
-
-            // Logic: 1. Dot/Dash separator or 2. Strict Prefix
-            if (nextWbs.startsWith(currWbs + '.') || nextWbs.startsWith(currWbs + '-') || (nextWbs.startsWith(currWbs) && nextWbs.length > currWbs.length)) {
-                isParent = true;
+            // If project uses explicit types (P, T, S)
+            if (hasExplicitLeafTypes) {
+                // 'P' (Partida) is a summary header when 'T' or 'S' tasks exist
+                if (current.type === 'P') {
+                    return;
+                }
+                leafTasks.push(current);
+                return;
             }
-        }
 
-        if (!isParent) {
+            // If no explicit types, non-parent tasks with or without WBS are leaves
             leafTasks.push(current);
-        }
-    }
+        });
+    });
+
     return leafTasks;
 }
 

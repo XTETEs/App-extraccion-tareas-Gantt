@@ -1,35 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { Button } from './ui/button';
 import type { ColumnMapping } from '../types';
 import { cn } from '../lib/utils';
+import { X } from 'lucide-react';
 
 export function MappingModal() {
     const { rawHeaders, setColumnMapping, setMappingModalOpen, isMappingModalOpen } = useStore();
-    const [mapping, setMapping] = useState<Partial<ColumnMapping>>({});
+    const [userOverrides, setUserOverrides] = useState<Partial<ColumnMapping>>({});
 
     // Auto-select columns based on common names
-    useEffect(() => {
+    const autoMapping = useMemo(() => {
+        const detected: Partial<ColumnMapping> = {};
         if (rawHeaders.length > 0) {
-            const newMapping: Partial<ColumnMapping> = {};
-
-            // Simple heuristic to find columns
             rawHeaders.forEach(header => {
-                const lower = String(header || '').toLowerCase();
-                // Project name is not a column anymore
-                if (lower.includes('tarea') || lower.includes('actividad') || lower.includes('descripcion')) newMapping.taskCol = header;
-                if (lower.includes('inicio') || lower.includes('comienzo')) newMapping.startCol = header;
-                if (lower.includes('fin') || lower.includes('termino') || lower.includes('final')) newMapping.endCol = header;
-                if (lower.includes('wbs') || lower === 'id' || lower.includes('code') || lower.includes('codigo') || lower.includes('código')) newMapping.wbsCol = header;
-                if (lower.includes('tipo') || lower.includes('type')) newMapping.typeCol = header;
-                if (lower.includes('holgura') || lower.includes('slack') || lower.includes('margen')) newMapping.slackCol = header;
-                if (lower.includes('hito') || lower.includes('milestone')) newMapping.milestoneCol = header;
-                if (lower.includes('presupuesto') || lower.includes('importe') || lower.includes('coste') || lower.includes('budget') || lower.includes('amount')) newMapping.budgetCol = header;
+                const lower = String(header || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                if (!detected.taskCol && (lower.includes('tarea') || lower.includes('actividad') || lower.includes('descripcion') || lower.includes('task'))) detected.taskCol = header;
+                if (!detected.startCol && (lower.includes('inicio') || lower.includes('comienzo') || lower.includes('start'))) detected.startCol = header;
+                if (!detected.endCol && (lower.includes('fin') || lower.includes('termino') || lower.includes('final') || lower.includes('end'))) detected.endCol = header;
+                if (!detected.wbsCol && (lower.includes('wbs') || lower === 'id' || lower.includes('codigo') || lower.includes('code'))) detected.wbsCol = header;
+                if (!detected.typeCol && (lower.includes('tipo') || lower.includes('type'))) detected.typeCol = header;
+                if (!detected.slackCol && (lower.includes('holgura') || lower.includes('slack') || lower.includes('margen'))) detected.slackCol = header;
+                if (!detected.milestoneCol && (lower.includes('hito') || lower.includes('milestone'))) detected.milestoneCol = header;
+                if (!detected.budgetCol && (lower.includes('presupuesto') || lower.includes('importe') || lower.includes('coste') || lower.includes('budget') || lower.includes('amount'))) detected.budgetCol = header;
             });
-
-            setMapping(prev => ({ ...prev, ...newMapping }));
         }
+        return detected;
     }, [rawHeaders]);
+
+    const mapping = { ...autoMapping, ...userOverrides };
 
     if (!isMappingModalOpen) return null;
 
@@ -37,35 +36,41 @@ export function MappingModal() {
         if (mapping.taskCol && mapping.startCol && mapping.endCol) {
             setColumnMapping(mapping as ColumnMapping);
             setMappingModalOpen(false);
-            // Ideally here we would re-trigger the file processing of the pending file, 
-            // but simpler flow is: User maps -> User uploads again OR we keep the file in memory.
-            // For V1, we will ask user to re-upload or handle existing file in FileUpload component if we kept it.
-            // Better UX: FileUpload keeps the file in a temp state and processes it after this closes.
         } else {
-            alert("Por favor, asigna todas las columnas obligatorias.");
+            alert("Por favor, asigna todas las columnas obligatorias (Tarea, Inicio, Fin).");
         }
     };
 
+    const handleClose = () => {
+        setMappingModalOpen(false);
+    };
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-lg text-card-foreground">
-                <h2 className="text-xl font-bold mb-4">Configurar Columnas</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-2xl text-card-foreground animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold">Configurar Columnas</h2>
+                    <button
+                        onClick={handleClose}
+                        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        title="Cerrar"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
                 <p className="text-sm text-muted-foreground mb-6">
-                    Para entender tu archivo Excel, necesitamos saber qué columna corresponde a cada dato.
-                    Esto solo se hace una vez.
+                    Indica qué columna del archivo corresponde a cada dato clave del cronograma.
                 </p>
 
                 <div className="space-y-4">
-
-
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Nombre de la Tarea (Ej. Columna E) <span className="text-destructive">*</span></label>
+                        <label className="text-sm font-medium">Nombre de la Tarea <span className="text-destructive">*</span></label>
                         <select
                             className={cn(
                                 "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors",
                                 mapping.taskCol ? "border-green-500 bg-green-50/10" : "border-destructive/50"
                             )}
-                            onChange={(e) => setMapping(prev => ({ ...prev, taskCol: e.target.value }))}
+                            onChange={(e) => setUserOverrides(prev => ({ ...prev, taskCol: e.target.value }))}
                             value={mapping.taskCol || ""}
                         >
                             <option value="">Selecciona una columna...</option>
@@ -74,13 +79,13 @@ export function MappingModal() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Fecha de Inicio (Ej. Columna F) <span className="text-destructive">*</span></label>
+                        <label className="text-sm font-medium">Fecha de Inicio <span className="text-destructive">*</span></label>
                         <select
                             className={cn(
                                 "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors",
                                 mapping.startCol ? "border-green-500 bg-green-50/10" : "border-destructive/50"
                             )}
-                            onChange={(e) => setMapping(prev => ({ ...prev, startCol: e.target.value }))}
+                            onChange={(e) => setUserOverrides(prev => ({ ...prev, startCol: e.target.value }))}
                             value={mapping.startCol || ""}
                         >
                             <option value="">Selecciona una columna...</option>
@@ -89,13 +94,13 @@ export function MappingModal() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Fecha de Fin (Ej. Columna G) <span className="text-destructive">*</span></label>
+                        <label className="text-sm font-medium">Fecha de Fin <span className="text-destructive">*</span></label>
                         <select
                             className={cn(
                                 "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors",
                                 mapping.endCol ? "border-green-500 bg-green-50/10" : "border-destructive/50"
                             )}
-                            onChange={(e) => setMapping(prev => ({ ...prev, endCol: e.target.value }))}
+                            onChange={(e) => setUserOverrides(prev => ({ ...prev, endCol: e.target.value }))}
                             value={mapping.endCol || ""}
                         >
                             <option value="">Selecciona una columna...</option>
@@ -104,10 +109,22 @@ export function MappingModal() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Tipo de Tarea (Opcional)</label>
+                        <label className="text-sm font-medium">WBS / Código (Opcional)</label>
                         <select
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            onChange={(e) => setMapping(prev => ({ ...prev, typeCol: e.target.value }))}
+                            onChange={(e) => setUserOverrides(prev => ({ ...prev, wbsCol: e.target.value }))}
+                            value={mapping.wbsCol || ""}
+                        >
+                            <option value="">(Sin asignar)</option>
+                            {rawHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Tipo de Tarea (P/T/S) (Opcional)</label>
+                        <select
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            onChange={(e) => setUserOverrides(prev => ({ ...prev, typeCol: e.target.value }))}
                             value={mapping.typeCol || ""}
                         >
                             <option value="">(Sin asignar)</option>
@@ -116,20 +133,25 @@ export function MappingModal() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Presupuesto/Importe (Opcional)</label>
+                        <label className="text-sm font-medium">Presupuesto / Importe (Opcional)</label>
                         <select
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            onChange={(e) => setMapping(prev => ({ ...prev, budgetCol: e.target.value }))}
+                            onChange={(e) => setUserOverrides(prev => ({ ...prev, budgetCol: e.target.value }))}
                             value={mapping.budgetCol || ""}
                         >
                             <option value="">(Sin asignar)</option>
                             {rawHeaders.map(h => <option key={h} value={h}>{h}</option>)}
                         </select>
                     </div>
-
                 </div>
 
-                <div className="mt-8 flex justify-end">
+                <div className="mt-8 flex justify-end gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={handleClose}
+                    >
+                        Cancelar
+                    </Button>
                     <Button 
                         onClick={handleSave}
                         disabled={!mapping.taskCol || !mapping.startCol || !mapping.endCol}

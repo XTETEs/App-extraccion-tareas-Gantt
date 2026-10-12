@@ -164,14 +164,13 @@ export function Dashboard() {
 
                 {viewMode === 'portfolio' ? (
                     <PortfolioHealth />
+                ) : viewMode === 'analysis' ? (
+                    <AnalysisView />
+                ) : viewMode === 'radar' ? (
+                    <BottleneckRadar />
                 ) : isReportGenerated ? (
-                    viewMode === 'analysis' ? (
-                        <AnalysisView />
-                    ) : viewMode === 'radar' ? (
-                        <BottleneckRadar />
-                    ) : (
-                        <>
-                            {/* KPI Cards - Modern Grid */}
+                    <>
+                        {/* KPI Cards - Modern Grid */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="bg-card/50 backdrop-blur-sm border border-border/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                                     <div className="absolute right-0 top-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
@@ -270,9 +269,8 @@ export function Dashboard() {
                                 <TaskTable tasks={filteredTasks} />
                             </div>
                         </>
-                    )
-                ) : (
-                    <div className="w-full h-[500px] flex flex-col items-center justify-center text-muted-foreground bg-muted/10 rounded-3xl border border-dashed border-border/50 p-8 text-center">
+                    ) : (
+                        <div className="w-full h-[500px] flex flex-col items-center justify-center text-muted-foreground bg-muted/10 rounded-3xl border border-dashed border-border/50 p-8 text-center">
                         <ListTodo className="h-16 w-16 mb-4 opacity-20" />
                         <h3 className="text-xl font-semibold mb-2">Esperando extracción</h3>
                         <p className="max-w-md">
@@ -286,7 +284,7 @@ export function Dashboard() {
                 <div className="w-full border-t border-border/40 pt-8 mt-8 no-print">
                     <div className="max-w-2xl mx-auto p-4 md:p-8 border border-dashed border-primary/20 rounded-3xl bg-primary/5 hover:bg-primary/10 transition-colors flex flex-col items-center justify-center text-center">
                         <h4 className="text-lg font-semibold mb-2">Gestión de Archivos</h4>
-                        <p className="text-muted-foreground mb-6 text-sm">Arrastra tus archivos Excel aquí para actualizar o añadir nuevos proyectos.</p>
+                        <p className="text-muted-foreground mb-6 text-sm">Arrastra tus archivos Excel o JSON aquí para actualizar o añadir nuevos proyectos.</p>
                         <div className="w-full max-w-md bg-background rounded-xl shadow-sm p-1">
                             <FileUpload />
                         </div>

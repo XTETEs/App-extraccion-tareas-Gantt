@@ -130,8 +130,8 @@ export function TaskTable({ tasks }: TaskTableProps) {
 
             if (strA && strB) {
                 // Split by common separators (., -, space)
-                const partsA = strA.split(/[\.\-\s]+/);
-                const partsB = strB.split(/[\.\-\s]+/);
+                const partsA = strA.split(/[.\-\s]+/);
+                const partsB = strB.split(/[.\-\s]+/);
 
                 const len = Math.min(partsA.length, partsB.length);
                 for (let i = 0; i < len; i++) {
@@ -465,7 +465,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                     <tfoot className="bg-muted/50 font-bold text-xs uppercase text-muted-foreground border-t border-border/50">
                                         {tasksByProject[projectName].length > getVisibleCount(projectName) && (
                                             <tr className="no-print">
-                                                <td colSpan={9} className="px-6 py-3 text-center bg-card">
+                                                <td colSpan={8} className="px-6 py-3 text-center bg-card">
                                                     <Button 
                                                         variant="outline" 
                                                         size="sm" 
@@ -478,10 +478,10 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                             </tr>
                                         )}
                                         <tr>
-                                            <td colSpan={3} className="px-6 py-4 text-right">
+                                            <td colSpan={6} className="px-6 py-4 text-right">
                                                 Total Proyecto:
                                             </td>
-                                            <td colSpan={2} className="px-6 py-4 text-right font-mono text-foreground pr-10">
+                                            <td className="px-6 py-4 text-right font-mono text-foreground font-bold">
                                                 {(() => {
                                                     if (!dateRange.from || !dateRange.to) {
                                                         const total = projectTasks.reduce((acc, task) => {
@@ -513,6 +513,7 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
                                                 })()}
                                             </td>
+                                            <td className="px-6 py-4"></td>
                                         </tr>
                                     </tfoot>
                                 </table>

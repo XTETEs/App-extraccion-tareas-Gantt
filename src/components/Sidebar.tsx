@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import type { Project } from '../types';
 import { cn } from '../lib/utils';
 import { Building2, Layers, Calendar as CalendarIcon, Eye, EyeOff, Settings2, GripVertical, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ProjectManagerModal } from './ProjectManagerModal';
 import { Button } from './ui/button';
+import { format } from 'date-fns';
 import {
     DndContext,
     closestCenter,
@@ -108,17 +109,14 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
     const [isManagerOpen, setIsManagerOpen] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
     const [clearSuccess, setClearSuccess] = useState(false);
-    const [lastSavedTime, setLastSavedTime] = useState<string>('');
 
-    // Update last saved time when projects change
-    useEffect(() => {
-        if (projects.length > 0) {
-            const validProjects = projects.filter(p => p.lastUpdated);
-            if (validProjects.length > 0) {
-                const latest = new Date(Math.max(...validProjects.map(p => new Date(p.lastUpdated!).getTime())));
-                setLastSavedTime(latest.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-            }
-        }
+    // Compute last saved time when projects change
+    const lastSavedTime = useMemo(() => {
+        if (projects.length === 0) return '';
+        const validProjects = projects.filter(p => p.lastUpdated);
+        if (validProjects.length === 0) return '';
+        const latest = new Date(Math.max(...validProjects.map(p => new Date(p.lastUpdated!).getTime())));
+        return latest.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }, [projects]);
 
     const sensors = useSensors(
@@ -165,8 +163,8 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
                         <input
                             type="date"
                             className="w-full bg-background/50 border border-border/50 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
-                            value={dateRange.from ? dateRange.from.toISOString().split('T')[0] : ''}
-                            onChange={(e) => setDateRange({ ...dateRange, from: e.target.value ? new Date(e.target.value) : undefined })}
+                            value={dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : ''}
+                            onChange={(e) => setDateRange({ ...dateRange, from: e.target.value ? new Date(e.target.value + 'T00:00:00.000') : undefined })}
                         />
                     </div>
                     <div className="space-y-1">
@@ -174,8 +172,8 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
                         <input
                             type="date"
                             className="w-full bg-background/50 border border-border/50 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
-                            value={dateRange.to ? dateRange.to.toISOString().split('T')[0] : ''}
-                            onChange={(e) => setDateRange({ ...dateRange, to: e.target.value ? new Date(e.target.value) : undefined })}
+                            value={dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : ''}
+                            onChange={(e) => setDateRange({ ...dateRange, to: e.target.value ? new Date(e.target.value + 'T23:59:59.999') : undefined })}
                         />
                     </div>
                 </div>

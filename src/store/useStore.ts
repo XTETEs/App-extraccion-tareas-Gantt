@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Task, ColumnMapping, DateRange, Project } from '../types';
 import { db } from '../db';
+import { differenceInCalendarDays } from 'date-fns';
 
 interface AppState {
     tasks: Task[];
@@ -45,7 +46,7 @@ export const useStore = create<AppState>((set) => ({
     isMappingModalOpen: false,
     rawHeaders: [],
     hiddenProjects: [],
-    isReportGenerated: false, // Default to false
+    isReportGenerated: true, // Default to true so data is immediately visible
     radarSelectedTask: '',
 
     setReportGenerated: (isGenerated) => set({ isReportGenerated: isGenerated }),
@@ -152,14 +153,15 @@ export const useStore = create<AppState>((set) => ({
                         order: p.order,
                         startDate: p.startDate,
                         endDate: p.endDate,
-                        blobUrl: p.blobUrl
+                        blobUrl: p.blobUrl,
+                        lastUpdated: p.lastUpdated
                     }))];
                 }
 
                 return {
                     tasks: newTasksState,
                     projects: newProjectsState,
-                    isReportGenerated: false
+                    isReportGenerated: true
                 };
             });
         } catch (error) {
@@ -170,7 +172,7 @@ export const useStore = create<AppState>((set) => ({
                     ...state.tasks.filter(t => !uniqueProjectNames.includes(t.projectName)),
                     ...newTasks
                 ],
-                isReportGenerated: false
+                isReportGenerated: true
             }));
         }
     },
@@ -178,7 +180,7 @@ export const useStore = create<AppState>((set) => ({
     setColumnMapping: (mapping) => set({ columnMapping: mapping }),
     setDateRange: (range) => set({
         dateRange: range,
-        isReportGenerated: false // Reset extraction when dates change
+        isReportGenerated: true
     }),
     setMappingModalOpen: (isOpen) => set({ isMappingModalOpen: isOpen }),
     setRawHeaders: (headers) => set({ rawHeaders: headers }),
@@ -195,15 +197,28 @@ export const useStore = create<AppState>((set) => ({
         try {
             const count = await db.tasks.count();
             if (count > 0) {
-                const tasks = await db.tasks.toArray();
+                const rawTasks = await db.tasks.toArray();
+                const now = new Date();
+                const tasks: Task[] = rawTasks.map(t => {
+                    const startDate = t.startDate instanceof Date ? t.startDate : new Date(t.startDate);
+                    const endDate = t.endDate instanceof Date ? t.endDate : new Date(t.endDate);
+                    const progress = t.progress ?? 0;
+                    return {
+                        ...t,
+                        startDate,
+                        endDate,
+                        delayDays: progress >= 100 ? 0 : differenceInCalendarDays(now, endDate)
+                    };
+                });
+
                 // CRITICAL: orderBy('order') excludes items where 'order' is undefined. 
                 // We must fetch ALL projects first.
-                let projects = await db.projects.toArray();
+                const projects = await db.projects.toArray();
 
                 // 1. Fallback: If no projects found but tasks exist (migration from v0 or broken state)
                 if (projects.length === 0 && tasks.length > 0) {
                     const uniqueProjects = Array.from(new Set(tasks.map(t => t.projectName))).sort();
-                    const newProjects = uniqueProjects.map((name, index) => ({
+                    const newProjects: Project[] = uniqueProjects.map((name, index) => ({
                         id: name,
                         name,
                         lastUpdated: new Date(),
@@ -212,7 +227,11 @@ export const useStore = create<AppState>((set) => ({
 
                     // Use bulkPut to upsert (safe if keys exist)
                     await db.projects.bulkPut(newProjects as any);
-                    set({ tasks, projects: newProjects.map(p => ({ id: p.id, name: p.name, order: p.order })) });
+                    set({ 
+                        tasks, 
+                        projects: newProjects,
+                        isReportGenerated: true 
+                    });
                     return;
                 }
 
@@ -221,15 +240,37 @@ export const useStore = create<AppState>((set) => ({
                 if (missingOrder) {
                     // Assign order based on current db order or alphabetical if arbitrary
                     projects.sort((a, b) => a.name.localeCompare(b.name));
-                    const updatedProjects = projects.map((p, i) => ({ ...p, order: p.order ?? i }));
+                    const updatedProjects = projects.map((p, i) => ({ 
+                        ...p, 
+                        order: p.order ?? i,
+                        lastUpdated: p.lastUpdated ? new Date(p.lastUpdated) : new Date(),
+                        startDate: p.startDate ? new Date(p.startDate) : undefined,
+                        endDate: p.endDate ? new Date(p.endDate) : undefined
+                    }));
 
                     await db.projects.bulkPut(updatedProjects);
 
-                    set({ tasks, projects: updatedProjects.map(p => ({ id: p.name, name: p.name, order: p.order, startDate: p.startDate, endDate: p.endDate })) });
+                    set({ 
+                        tasks, 
+                        projects: updatedProjects,
+                        isReportGenerated: true 
+                    });
                 } else {
                     // 3. Normal Case: sort by order
                     projects.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-                    set({ tasks, projects: projects.map(p => ({ id: p.name, name: p.name, order: p.order, startDate: p.startDate, endDate: p.endDate, blobUrl: p.blobUrl })) });
+                    set({ 
+                        tasks, 
+                        projects: projects.map(p => ({
+                            id: p.name,
+                            name: p.name,
+                            order: p.order,
+                            startDate: p.startDate ? new Date(p.startDate) : undefined,
+                            endDate: p.endDate ? new Date(p.endDate) : undefined,
+                            blobUrl: p.blobUrl,
+                            lastUpdated: p.lastUpdated ? new Date(p.lastUpdated) : new Date()
+                        })),
+                        isReportGenerated: true 
+                    });
                 }
             }
         } catch (error) {

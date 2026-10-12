@@ -130,8 +130,8 @@ export function TaskTable({ tasks }: TaskTableProps) {
 
             if (strA && strB) {
                 // Split by common separators (., -, space)
-                const partsA = strA.split(/[\.\-\s]+/);
-                const partsB = strB.split(/[\.\-\s]+/);
+                const partsA = strA.split(/[.\-\s]+/);
+                const partsB = strB.split(/[.\-\s]+/);
 
                 const len = Math.min(partsA.length, partsB.length);
                 for (let i = 0; i < len; i++) {
