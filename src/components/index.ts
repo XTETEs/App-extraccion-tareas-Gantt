@@ -1,5 +1,4 @@
 export * from './Dashboard';
-export * from './MappingModal';
 export * from './FileUpload';
 export * from './Sidebar';
 export * from './BottleneckRadar';

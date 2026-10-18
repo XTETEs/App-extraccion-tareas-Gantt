@@ -8,7 +8,6 @@ interface AppState {
     projects: Project[];
     columnMapping: ColumnMapping | null;
     dateRange: DateRange;
-    isMappingModalOpen: boolean;
     rawHeaders: string[];
     hiddenProjects: string[];
 
@@ -22,7 +21,6 @@ interface AppState {
     reorderProjects: (projects: Project[]) => Promise<void>;
     setColumnMapping: (mapping: ColumnMapping) => void;
     setDateRange: (range: DateRange) => void;
-    setMappingModalOpen: (isOpen: boolean) => void;
     setRawHeaders: (headers: string[]) => void;
     toggleProjectVisibility: (projectId: string) => void;
 
@@ -46,7 +44,6 @@ export const useStore = create<AppState>((set) => ({
     projects: [],
     columnMapping: null,
     dateRange: { from: undefined, to: undefined },
-    isMappingModalOpen: false,
     rawHeaders: [],
     hiddenProjects: [],
     isReportGenerated: true, // Default to true so data is immediately visible
@@ -204,7 +201,6 @@ export const useStore = create<AppState>((set) => ({
         dateRange: range,
         isReportGenerated: true
     }),
-    setMappingModalOpen: (isOpen) => set({ isMappingModalOpen: isOpen }),
     setRawHeaders: (headers) => set({ rawHeaders: headers }),
 
     toggleProjectVisibility: (projectId) => set((state) => ({
