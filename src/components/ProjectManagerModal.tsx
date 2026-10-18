@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { X, Trash2, CheckSquare, FolderOpen } from 'lucide-react';
+import { X, Trash2, CheckSquare, FolderOpen, Upload, Download, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Button } from './ui/button';
+import { processAnyFile, uploadFileToBlob } from '../lib/fileProcessor';
+import { format } from 'date-fns';
 
 interface ProjectManagerModalProps {
     isOpen: boolean;
@@ -10,8 +12,10 @@ interface ProjectManagerModalProps {
 }
 
 export function ProjectManagerModal({ isOpen, onClose }: ProjectManagerModalProps) {
-    const { projects: storedProjects, deleteProjects } = useStore();
+    const { projects: storedProjects, tasks, deleteProjects } = useStore();
     const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Use stored projects
     const projects = storedProjects;
@@ -54,9 +58,58 @@ export function ProjectManagerModal({ isOpen, onClose }: ProjectManagerModalProp
         }
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const files = Array.from(e.target.files);
+        setIsImporting(true);
+        for (const file of files) {
+            await processAnyFile(file);
+            uploadFileToBlob(file).catch(() => {});
+        }
+        setIsImporting(false);
+        e.target.value = '';
+    };
+
+    const handleExportBackup = () => {
+        const backupData = {
+            exportDate: new Date().toISOString(),
+            projects: projects.map(p => ({
+                id: p.id,
+                name: p.name,
+                order: p.order,
+                startDate: p.startDate ? format(p.startDate, 'yyyy-MM-dd') : undefined,
+                endDate: p.endDate ? format(p.endDate, 'yyyy-MM-dd') : undefined,
+            })),
+            tasks: tasks.map(t => ({
+                id: t.id,
+                projectId: t.projectId,
+                projectName: t.projectName,
+                name: t.name,
+                startDate: format(t.startDate, 'yyyy-MM-dd'),
+                endDate: format(t.endDate, 'yyyy-MM-dd'),
+                progress: t.progress ?? 0,
+                budget: t.budget,
+                isCritical: !!t.isCritical,
+                totalSlack: t.totalSlack,
+                wbs: t.wbs,
+                type: t.type,
+                industrial: t.industrial,
+                delayDays: t.delayDays || 0
+            }))
+        };
+
+        const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(backupData, null, 2))}`;
+        const a = document.createElement('a');
+        a.href = jsonString;
+        a.download = `Copia_Seguridad_Obras_${format(new Date(), 'yyyyMMdd_HHmm')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-md bg-card border border-border/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">
+            <div className="w-full max-w-md bg-card border border-border/50 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
 
                 {/* Header */}
                 <div className="p-4 border-b border-border/40 flex items-center justify-between bg-muted/30">
@@ -66,12 +119,48 @@ export function ProjectManagerModal({ isOpen, onClose }: ProjectManagerModalProp
                         </div>
                         <div>
                             <h3 className="font-bold text-sm">Gestor de Obras</h3>
-                            <p className="text-xs text-muted-foreground">Selecciona para eliminar</p>
+                            <p className="text-xs text-muted-foreground">Administra, importa o elimina planificaciones</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-1 hover:bg-muted rounded-md transition-colors text-muted-foreground hover:text-foreground">
                         <X className="h-5 w-5" />
                     </button>
+                </div>
+
+                {/* Import / Export quick toolbar */}
+                <div className="px-4 py-2.5 bg-muted/20 border-b border-border/30 flex items-center justify-between gap-2">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        multiple
+                        accept=".xlsx,.xls,.csv,.json"
+                        onChange={handleFileUpload}
+                    />
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isImporting}
+                        className="text-xs h-7 gap-1.5"
+                    >
+                        {isImporting ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                            <Upload className="h-3 w-3" />
+                        )}
+                        Importar JSON/Excel
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleExportBackup}
+                        disabled={projects.length === 0}
+                        className="text-xs h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                        <Download className="h-3 w-3" />
+                        Descargar Copia JSON
+                    </Button>
                 </div>
 
                 {/* List - Scrollable */}

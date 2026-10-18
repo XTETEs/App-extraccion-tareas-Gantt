@@ -57,8 +57,9 @@ export function getLeafTasks(allTasks: any[]) {
 
             // If project uses explicit types (P, T, S)
             if (hasExplicitLeafTypes) {
-                // 'P' (Partida) is a summary header when 'T' or 'S' tasks exist
-                if (current.type === 'P') {
+                // 'P' (Partida) is a summary header when 'T' or 'S' tasks exist,
+                // UNLESS it has no children and has its own industrial or explicit data
+                if (current.type === 'P' && (hasChildrenByWbs || !current.industrial)) {
                     return;
                 }
                 leafTasks.push(current);

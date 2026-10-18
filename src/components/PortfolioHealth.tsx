@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { getLeafTasks, stringToColor, cn } from '../lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AlertCircle, CheckCircle2, Clock, Activity } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Activity, Upload, Loader2 } from 'lucide-react';
+import { processAnyFile, uploadFileToBlob } from '../lib/fileProcessor';
 
 type ProjectHealth = {
     id: string;
@@ -120,6 +121,20 @@ function ProjectCard({ project }: { project: ProjectHealth }) {
 
 export function PortfolioHealth() {
     const { tasks, projects } = useStore();
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const files = Array.from(e.target.files);
+        setIsUploading(true);
+        for (const file of files) {
+            await processAnyFile(file);
+            uploadFileToBlob(file).catch(() => {});
+        }
+        setIsUploading(false);
+        e.target.value = '';
+    };
 
     const healthData = useMemo(() => {
         const leafTasks = getLeafTasks(tasks);
@@ -186,9 +201,29 @@ export function PortfolioHealth() {
     if (healthData.length === 0) {
         return (
             <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground bg-muted/10 rounded-3xl border border-dashed border-border/50 p-8 text-center">
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    multiple
+                    accept=".xlsx,.xls,.csv,.json"
+                    onChange={handleUpload}
+                />
                 <Activity className="h-16 w-16 mb-4 opacity-20" />
                 <h3 className="text-xl font-semibold mb-2">Sin datos de proyectos</h3>
-                <p>Cargue archivos Excel para visualizar el estado global del portafolio.</p>
+                <p className="max-w-md text-sm mb-6">Cargue archivos Excel o JSON para visualizar el estado global del portafolio.</p>
+                <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm shadow-md hover:bg-primary/90 transition-all cursor-pointer"
+                >
+                    {isUploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Upload className="h-4 w-4" />
+                    )}
+                    Cargar archivo JSON o Excel
+                </button>
             </div>
         );
     }

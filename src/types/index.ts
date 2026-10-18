@@ -24,6 +24,7 @@ export interface Project {
     order?: number;
     startDate?: Date;
     endDate?: Date;
+    budget?: number;
     /** URL of the corresponding Vercel Blob file */
     blobUrl?: string;
 }

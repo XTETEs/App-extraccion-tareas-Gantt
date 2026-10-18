@@ -1,4 +1,3 @@
-import { MappingModal } from './components';
 import { FileUpload } from './components';
 import { useStore } from './store/useStore';
 import { Dashboard } from './components';
@@ -34,8 +33,6 @@ function App() {
         </header>
 
         <main className="flex-1 overflow-hidden print:overflow-visible relative">
-          <MappingModal />
-
           {tasks.length === 0 ? (
             <div className="h-full w-full flex flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-background to-background">
               <div className="max-w-2xl w-full space-y-8 animate-in fade-in zoom-in-95 duration-700">

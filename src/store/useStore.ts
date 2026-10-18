@@ -14,7 +14,10 @@ interface AppState {
 
     // Actions
     setTasks: (tasks: Task[]) => void;
-    addTasks: (tasks: Task[], projectDates?: { startDate?: Date, endDate?: Date, blobUrl?: string }) => Promise<void>;
+    addTasks: (
+        tasks: Task[],
+        projectDates?: { startDate?: Date; endDate?: Date; blobUrl?: string } | Map<string, { startDate?: Date; endDate?: Date; blobUrl?: string }> | Record<string, { startDate?: Date; endDate?: Date; blobUrl?: string }>
+    ) => Promise<void>;
     setProjects: (projects: Project[]) => void;
     reorderProjects: (projects: Project[]) => Promise<void>;
     setColumnMapping: (mapping: ColumnMapping) => void;
@@ -96,6 +99,22 @@ export const useStore = create<AppState>((set) => ({
                 : -1;
 
             for (const name of uniqueProjectNames) {
+                // Determine per-project start and end date from tasks as fallback
+                const projTasks = newTasks.filter(t => t.projectName === name);
+                const taskStarts = projTasks.map(t => (t.startDate instanceof Date ? t.startDate : new Date(t.startDate)).getTime()).filter(n => !isNaN(n));
+                const taskEnds = projTasks.map(t => (t.endDate instanceof Date ? t.endDate : new Date(t.endDate)).getTime()).filter(n => !isNaN(n));
+                const minStart = taskStarts.length > 0 ? new Date(Math.min(...taskStarts)) : undefined;
+                const maxEnd = taskEnds.length > 0 ? new Date(Math.max(...taskEnds)) : undefined;
+
+                const specific = projectDates instanceof Map
+                    ? projectDates.get(name)
+                    : (projectDates && typeof projectDates === 'object' && name in (projectDates as any) ? (projectDates as any)[name] : undefined);
+
+                const startDate = specific?.startDate || (projectDates as any)?.startDate || minStart;
+                const endDate = specific?.endDate || (projectDates as any)?.endDate || maxEnd;
+                const budget = specific?.budget !== undefined ? specific.budget : (projectDates as any)?.budget;
+                const blobUrl = specific?.blobUrl || (projectDates as any)?.blobUrl;
+
                 if (!existingNamesSet.has(name)) {
                     currentMaxOrder++;
                     const newProject: Project = {
@@ -103,17 +122,19 @@ export const useStore = create<AppState>((set) => ({
                         name,
                         lastUpdated: new Date(),
                         order: currentMaxOrder,
-                        startDate: projectDates?.startDate,
-                        endDate: projectDates?.endDate,
-                        blobUrl: projectDates?.blobUrl,
+                        startDate,
+                        endDate,
+                        budget,
+                        blobUrl,
                     };
                     projectsToAdd.push(newProject);
                     existingNamesSet.add(name); // Prevent duplicate adds in same batch
                 } else {
                     const updateData: any = { lastUpdated: new Date() };
-                    if (projectDates?.startDate) updateData.startDate = projectDates.startDate;
-                    if (projectDates?.endDate) updateData.endDate = projectDates.endDate;
-                    if (projectDates?.blobUrl) updateData.blobUrl = projectDates.blobUrl;
+                    if (startDate) updateData.startDate = startDate;
+                    if (endDate) updateData.endDate = endDate;
+                    if (budget !== undefined) updateData.budget = budget;
+                    if (blobUrl) updateData.blobUrl = blobUrl;
                     
                     projectsToUpdate.set(name, updateData);
                 }
@@ -153,6 +174,7 @@ export const useStore = create<AppState>((set) => ({
                         order: p.order,
                         startDate: p.startDate,
                         endDate: p.endDate,
+                        budget: p.budget,
                         blobUrl: p.blobUrl,
                         lastUpdated: p.lastUpdated
                     }))];

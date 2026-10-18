@@ -88,6 +88,60 @@ export function TaskTable({ tasks }: TaskTableProps) {
         XLSX.writeFile(wb, fileName);
     };
 
+    const exportToJson = () => {
+        if (filteredTasks.length === 0) return;
+
+        const projectGroups: Record<string, Task[]> = {};
+        filteredTasks.forEach(task => {
+            const pName = task.projectName || 'Sin Proyecto';
+            if (!projectGroups[pName]) projectGroups[pName] = [];
+            projectGroups[pName].push(task);
+        });
+
+        const exportProjects = Object.entries(projectGroups).map(([name, pTasks]) => {
+            const pStore = projects.find(p => p.name === name);
+            const taskStartDates = pTasks.map(t => t.startDate.getTime());
+            const taskEndDates = pTasks.map(t => t.endDate.getTime());
+            const minStart = new Date(Math.min(...taskStartDates));
+            const maxEnd = new Date(Math.max(...taskEndDates));
+
+            return {
+                name,
+                startDate: format(pStore?.startDate || minStart, 'yyyy-MM-dd'),
+                endDate: format(pStore?.endDate || maxEnd, 'yyyy-MM-dd'),
+                tasks: pTasks.map(t => ({
+                    id: t.id,
+                    wbs: t.wbs || '',
+                    type: t.type || 'T',
+                    name: t.name,
+                    startDate: format(t.startDate, 'yyyy-MM-dd'),
+                    endDate: format(t.endDate, 'yyyy-MM-dd'),
+                    progress: t.progress ?? 0,
+                    budget: t.budget,
+                    isCritical: !!t.isCritical,
+                    totalSlack: t.totalSlack,
+                    industrial: t.industrial,
+                    delayDays: t.delayDays || 0
+                }))
+            };
+        });
+
+        const exportPayload = {
+            exportDate: new Date().toISOString(),
+            totalProjects: exportProjects.length,
+            totalTasks: filteredTasks.length,
+            projects: exportProjects
+        };
+
+        const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(exportPayload, null, 2))}`;
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute('href', jsonString);
+        downloadAnchor.setAttribute('download', `Exportacion_Tareas_${format(new Date(), 'yyyyMMdd_HHmm')}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    };
+
     // 1. Group by Project Name
     const tasksByProject: Record<string, Task[]> = {};
     filteredTasks.forEach(task => {
@@ -214,6 +268,16 @@ export function TaskTable({ tasks }: TaskTableProps) {
                         <Button
                             variant="outline"
                             size="sm"
+                            onClick={exportToJson}
+                            disabled={filteredTasks.length === 0}
+                            className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20 rounded-full h-8 px-4 font-semibold transition-all no-print"
+                        >
+                            <Download className="h-4 w-4 mr-2" />
+                            Exportar JSON
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
                             onClick={exportToExcel}
                             disabled={filteredTasks.length === 0}
                             className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 rounded-full h-8 px-4 font-semibold transition-all no-print"
@@ -260,12 +324,22 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                 <h3 className="font-bold text-sm uppercase tracking-wide text-foreground flex items-center gap-2">
                                     {projectName}
                                 </h3>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-muted-foreground font-mono">
-                                        {format(projectStartDate, 'dd MMM yyyy', { locale: es })} - {format(projectEndDate, 'dd MMM yyyy', { locale: es })}
-                                    </span>
-                                </div>
+                                {(() => {
+                                    const projectBudget = projectStore?.budget ?? projectTasks.reduce((acc, t) => acc + (t.budget || 0), 0);
 
+                                    return (
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-[10px] text-muted-foreground font-mono">
+                                                {format(projectStartDate, 'dd MMM yyyy', { locale: es })} - {format(projectEndDate, 'dd MMM yyyy', { locale: es })}
+                                            </span>
+                                            {projectBudget > 0 && (
+                                                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 font-mono">
+                                                    {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(projectBudget)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                             <span className="text-xs text-muted-foreground ml-auto bg-background/50 px-2 py-1 rounded-md border border-border/20">
                                 {tasksByProject[projectName].length} tareas
@@ -488,7 +562,8 @@ export function TaskTable({ tasks }: TaskTableProps) {
                                                             if (task.budget === undefined) return acc;
                                                             return acc + task.budget;
                                                         }, 0);
-                                                        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(total);
+                                                        const effectiveTotal = (total === 0 && projectStore?.budget) ? projectStore.budget : total;
+                                                        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(effectiveTotal);
                                                     }
 
                                                     const rangeStart = dateRange.from.getTime();

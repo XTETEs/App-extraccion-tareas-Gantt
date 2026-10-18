@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import type { Project } from '../types';
 import { cn } from '../lib/utils';
-import { Building2, Layers, Calendar as CalendarIcon, Eye, EyeOff, Settings2, GripVertical, CheckCircle2 } from 'lucide-react';
+import { Building2, Layers, Calendar as CalendarIcon, Eye, EyeOff, Settings2, GripVertical, CheckCircle2, Upload, Loader2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ProjectManagerModal } from './ProjectManagerModal';
 import { Button } from './ui/button';
 import { format } from 'date-fns';
+import { processAnyFile, uploadFileToBlob } from '../lib/fileProcessor';
 import {
     DndContext,
     closestCenter,
@@ -109,6 +110,20 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
     const [isManagerOpen, setIsManagerOpen] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
     const [clearSuccess, setClearSuccess] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const sidebarFileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleSidebarFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        const files = Array.from(e.target.files);
+        setIsUploading(true);
+        for (const file of files) {
+            await processAnyFile(file);
+            uploadFileToBlob(file).catch(() => {});
+        }
+        setIsUploading(false);
+        e.target.value = '';
+    };
 
     // Compute last saved time when projects change
     const lastSavedTime = useMemo(() => {
@@ -200,13 +215,35 @@ export function Sidebar({ projects, selectedProjectId, onSelectProject }: Sideba
                     <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
                         Obras ({projects.length})
                     </h4>
-                    <button
-                        onClick={() => setIsManagerOpen(true)}
-                        className="opacity-0 group-hover/header:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-primary rounded-md hover:bg-muted"
-                        title="Gestionar obras"
-                    >
-                        <Settings2 className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <input
+                            type="file"
+                            ref={sidebarFileInputRef}
+                            className="hidden"
+                            multiple
+                            accept=".xlsx,.xls,.csv,.json"
+                            onChange={handleSidebarFileUpload}
+                        />
+                        <button
+                            onClick={() => sidebarFileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="p-1 text-muted-foreground hover:text-primary rounded-md hover:bg-muted transition-colors"
+                            title="Cargar archivo JSON o Excel"
+                        >
+                            {isUploading ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                            ) : (
+                                <Upload className="h-3.5 w-3.5" />
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setIsManagerOpen(true)}
+                            className="opacity-0 group-hover/header:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-primary rounded-md hover:bg-muted"
+                            title="Gestionar obras"
+                        >
+                            <Settings2 className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
                 </div>
 
                 <div className="space-y-1">
